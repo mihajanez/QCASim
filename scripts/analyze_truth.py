@@ -128,11 +128,31 @@ def _cmp_memory_cell(row: list[str]) -> float:
     else:
         return 1.0
     
+def _cmp_flipflop1(row: list[str]) -> float:
+    truth_table = {
+        ('A', 'A'): 'B',
+        ('A', 'B'): 'A',
+        ('A', 'C'): 'B',
+        ('B', 'A'): 'B',
+        ('B', 'B'): 'B',
+        ('B', 'C'): 'B',
+        ('C', 'A'): 'C',
+        ('C', 'B'): 'B',
+        ('C', 'C'): 'C',
+    }
+
+    [flip, g1, q] = [_equivariance(r) for r in row]
+    if (g1, flip) in truth_table:
+        return 1.0 if truth_table[(g1, flip)] == q else 0.0
+    else:
+        return 1.0
+    
 class LogicFunction(Enum):
     WIRE = 'line'
     INVERTER = 'inverter'
     MAJORITY = 'majority'
     MEMORY_CELL = 'memory-cell'
+    FLIPFLOP1 = 'flipflop1'
 
 def analyze_simulation_file(file_path: str, comparison_mode: LogicFunction, clock_delays: list[str]) -> float:
     table = _run_analysis(file_path, clock_delays)
@@ -145,6 +165,8 @@ def analyze_simulation_file(file_path: str, comparison_mode: LogicFunction, cloc
         cmp_func = _cmp_majority
     elif comparison_mode == LogicFunction.MEMORY_CELL:
         cmp_func = _cmp_memory_cell
+    elif comparison_mode == LogicFunction.FLIPFLOP1:
+        cmp_func = _cmp_flipflop1
     else:
         raise RuntimeError(f'Unknown comparison mode: {comparison_mode}')
     

@@ -84,6 +84,12 @@ def visualize_truth_analysis(truth_analysis_filenames: list[str], output_filenam
     cbar1 = plt.colorbar(contour_filled, ax=ax1, shrink=1.0)
     cbar1.set_label('Pravilnost', fontsize=12)
 
+    # author_x = 60
+    # author_y = 14.14
+    # ax1.plot(author_x, author_y, marker='.', markersize=10, color='red')
+    # author_x = 72
+    # author_y = 17.42
+    # ax1.plot(author_x, author_y, marker='.', markersize=10, color='red')
     # author_x = 110
     # author_y = 26.13 
     # ax1.plot(author_x, author_y, marker='.', markersize=10, color='red')

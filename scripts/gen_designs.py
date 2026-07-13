@@ -27,6 +27,22 @@ def _set_intercell_distance(orig_design: any, original_side_length: float, side_
     result['cell_architectures'][arch_id]['dot_positions'] = new_pos
     return result
 
+
+def _set_displacement(orig_design: any, original_side_length: float, side_length: float, displacement: float) -> any:
+    result = copy.deepcopy(orig_design)
+
+    for layer in result['layers']:
+        for cell in layer['cells']:
+            cell['position'] = list(map(
+                lambda p: (p/original_side_length) * side_length,
+                cell['position']
+            ))
+            if cell['label'] == 'O2':
+                cell['position'][1] = float(cell['position'][1] + displacement)
+
+    return result
+
+
 def generate_designs(design_filename: str, output_dir: str, spacings: list[float], radiuses: list[float]) -> int:
     count = 0
     with open(design_filename, 'r') as design_file:
@@ -42,11 +58,38 @@ def generate_designs(design_filename: str, output_dir: str, spacings: list[float
 
         for side_length in spacings:
             for radius in radiuses:
-                new_design = _set_intercell_distance(design, original_side_length, side_length, radius)
+                new_design = _set_intercell_distance(
+                    design, side_length, radius)
                 with open(f'{output_dir}/{base_name}_{side_length}_{round(radius, 2)}.qcd', 'w') as new_design_file:
                     new_design_file.write(json.dumps({"design": new_design}))
                 count += 1
     return count
+
+
+def generate_designs_displacement(design_filename: str, output_dir: str, spacings: list[float], displacements: list[float]) -> int:
+    count = 0
+    with open(design_filename, 'r') as design_file:
+        base_name = os.path.splitext(os.path.basename(design_file.name))[0]
+        content = design_file.read()
+        design = json.loads(content)['design']
+
+        architectures = design['cell_architectures']
+        arch_id = design['layers'][0]['cell_architecture_id']
+        architecture = architectures[arch_id]
+
+        original_side_length = architecture['side_length']
+
+        for side_length in spacings:
+            for displacement in displacements:
+                new_design = _set_displacement(
+                    design, original_side_length, side_length, displacement)
+                with open(f'{output_dir}/{base_name}_{side_length}_{round(displacement, 2)}.qcd', 'w') as new_design_file:
+                    new_design_file.write(json.dumps(
+                        {"design": new_design, "designer_properties": {}}))
+            count += 1
+
+    return count
+
 
 if __name__ == '__main__':
     if len(sys.argv) != 5:
@@ -62,10 +105,12 @@ if __name__ == '__main__':
     dist_range_arg = list(map(float, sys.argv[3].split(':')))
     radius_range_arg = list(map(float, sys.argv[4].split(':')))
 
-    spacings = np.arange(dist_range_arg[0], dist_range_arg[1] + dist_range_arg[2], dist_range_arg[2])
+    spacings = np.arange(
+        dist_range_arg[0], dist_range_arg[1] + dist_range_arg[2], dist_range_arg[2])
     print(f'Generating spacing {min(spacings)} .. {max(spacings)}')
 
-    radiuses = np.arange(radius_range_arg[0], radius_range_arg[1] + radius_range_arg[2], radius_range_arg[2])
+    radiuses = np.arange(
+        radius_range_arg[0], radius_range_arg[1] + radius_range_arg[2], radius_range_arg[2])
     print(f'Generating radius {min(radiuses)} .. {max(radiuses)}')
 
     count = generate_designs(filename, output_dir, spacings, radiuses)
