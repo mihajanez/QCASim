@@ -12,7 +12,9 @@ use std::{collections::HashMap, mem};
 
 struct BistableNeighbor {
     cell_index: QCACellIndex,
-    kink_energy: f64,
+    // kink_energy[k][l] is the coupling between this cell's polarization
+    // component k and the neighbor's polarization component l.
+    kink_energy: Vec<Vec<f64>>,
 }
 
 pub struct BistableModel {
@@ -22,8 +24,8 @@ pub struct BistableModel {
     index_cells_read_map: HashMap<QCACellIndex, QCACell>,
     index_cells_write_map: HashMap<QCACellIndex, QCACell>,
     cell_input_map: HashMap<QCACellIndex, usize>,
-    active_layer: i8,
-    polarizations: [Vec<f64>; 2],
+    layer_map: HashMap<usize, QCALayer>,
+    cell_architectures_map: HashMap<String, QCACellArchitecture>,
     neighborhood_map: HashMap<QCACellIndex, Vec<BistableNeighbor>>,
     model_settings: BistableModelSettings,
     clock_settings: BistableClockGeneratorSettings,
@@ -38,7 +40,7 @@ pub struct BistableModelSettings {
     #[serde_inline_default(1e-3)]
     convergence_tolerance: f64,
 
-    #[serde_inline_default(65.0)]
+    #[serde_inline_default(150.0)]
     neighborhood_radius: f64,
 
     #[serde_inline_default(12.9)]
@@ -51,10 +53,15 @@ pub struct BistableClockGeneratorSettings {
     #[serde_inline_default(1)]
     num_cycles: usize,
 
-    #[serde_inline_default(1e-3)]
+    // Clock amplitudes are compared directly against kink energies, which
+    // are real Coulomb interaction energies in joules (~1e-19 to 1e-23 J for
+    // nanometer-scale QCA cells) - not the arbitrary small/large numbers
+    // used previously, which were many orders of magnitude off and left
+    // every cell effectively unable to switch.
+    #[serde_inline_default(1e-25)]
     amplitude_min: f64,
 
-    #[serde_inline_default(65.0)]
+    #[serde_inline_default(1e-19)]
     amplitude_max: f64,
 
     #[serde_inline_default(0)]
@@ -108,12 +115,12 @@ impl BistableModel {
         BistableModel {
             clock_states: [0.0, 0.0, 0.0, 0.0],
             input_states: vec![],
-            active_layer: 0,
             index_cells_static_map: HashMap::new(),
             index_cells_read_map: HashMap::new(),
             index_cells_write_map: HashMap::new(),
             cell_input_map: HashMap::new(),
-            polarizations: [vec![], vec![]],
+            layer_map: HashMap::new(),
+            cell_architectures_map: HashMap::new(),
             neighborhood_map: HashMap::new(),
             model_settings: BistableModelSettings::new(),
             clock_settings: BistableClockGeneratorSettings::new(),
@@ -126,83 +133,83 @@ impl BistableModel {
         .sqrt()
     }
 
-    fn determine_kink_energy(cell_a: &QCACell, cell_b: &QCACell, permitivity: f64) -> f64 {
-        const QCHARGE_SQUAR_OVER_FOUR: f64 = 6.41742353846709430467559076549e-39;
+    // Position of a single dot of `cell`, in the same 2D coordinate space as
+    // `cell.position`, accounting for the cell's rotation and the dot layout
+    // of its architecture.
+    fn get_dot_position(
+        dot_index: usize,
+        cell: &QCACell,
+        architecture: &QCACellArchitecture,
+    ) -> [f64; 2] {
+        let [x, y] = architecture.dot_positions[dot_index];
+        [
+            cell.position[0] + x * cell.rotation.cos() - y * cell.rotation.sin(),
+            cell.position[1] + y * cell.rotation.cos() + x * cell.rotation.sin(),
+        ]
+    }
+
+    fn dot_distance(a: &[f64; 2], b: &[f64; 2]) -> f64 {
+        ((a[0] - b[0]).powf(2.0) + (a[1] - b[1]).powf(2.0)).sqrt()
+    }
+
+    /// Kink energy between polarization component `component_a` of `cell_a`
+    /// and polarization component `component_b` of `cell_b`. Generalizes the
+    /// classic 2-state (4-dot) bistable kink energy to cells with any
+    /// dot_count by deriving each dot's charge deviation from the cell's
+    /// average charge (2 electrons spread over `dot_count` dots) directly
+    /// from `polarization_to_dot_probability_distribution`, then summing the
+    /// pairwise Coulomb interaction over every dot pair using the actual
+    /// dot geometry of each cell's architecture.
+    fn determine_kink_energy(
+        cell_a: &QCACell,
+        arch_a: &QCACellArchitecture,
+        component_a: usize,
+        cell_b: &QCACell,
+        arch_b: &QCACellArchitecture,
+        component_b: usize,
+        permitivity: f64,
+    ) -> f64 {
+        const E_CHARGE: f64 = 1.602_176_634e-19;
         const FOUR_PI_EPSILON: f64 = 1.11265005597565794635320037482e-10;
 
-        const SAME_POLARIZATION: [[f64; 4]; 4] = [
-            [
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-            ],
-            [
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-            ],
-            [
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-            ],
-            [
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-            ],
-        ];
+        let n_a = arch_a.dot_count as usize;
+        let n_b = arch_b.dot_count as usize;
+        let num_components_a = n_a / 4;
+        let num_components_b = n_b / 4;
+        let baseline_a = 2.0 / n_a as f64;
+        let baseline_b = 2.0 / n_b as f64;
 
-        const DIFF_POLARIZATION: [[f64; 4]; 4] = [
-            [
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-            ],
-            [
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-            ],
-            [
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-            ],
-            [
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-                QCHARGE_SQUAR_OVER_FOUR,
-                -QCHARGE_SQUAR_OVER_FOUR,
-            ],
-        ];
+        let occupation = |num_components: usize, component: usize, sign: f64| {
+            let mut polarization = vec![0.0; num_components];
+            polarization[component] = sign;
+            polarization_to_dot_probability_distribution(&polarization)
+        };
 
-        const DOT_OFFSET_X: [f64; 4] = [-4.5, 4.5, 4.5, -4.5];
-        const DOT_OFFSET_Y: [f64; 4] = [-4.5, -4.5, 4.5, 4.5];
+        let occ_a_pos = occupation(num_components_a, component_a, 1.0);
+        let occ_b_pos = occupation(num_components_b, component_b, 1.0);
+        let occ_b_neg = occupation(num_components_b, component_b, -1.0);
 
         let mut energy_same: f64 = 0.0;
         let mut energy_diff: f64 = 0.0;
 
-        for i in 0..4 {
-            for j in 0..4 {
-                let x: f64 = f64::abs(
-                    cell_a.position[0] + DOT_OFFSET_X[i] - (cell_b.position[0] + DOT_OFFSET_X[j]),
-                );
-                let y: f64 = f64::abs(
-                    cell_a.position[1] + DOT_OFFSET_Y[i] - (cell_b.position[1] + DOT_OFFSET_Y[j]),
-                );
+        for i in 0..n_a {
+            let dev_a = occ_a_pos[i] - baseline_a;
+            if dev_a == 0.0 {
+                continue;
+            }
+            let pos_a = Self::get_dot_position(i, cell_a, arch_a);
 
-                let dist = 1e-9 * f64::sqrt(x * x + y * y);
+            for j in 0..n_b {
+                let dev_b_pos = occ_b_pos[j] - baseline_b;
+                let dev_b_neg = occ_b_neg[j] - baseline_b;
+                if dev_b_pos == 0.0 && dev_b_neg == 0.0 {
+                    continue;
+                }
+                let pos_b = Self::get_dot_position(j, cell_b, arch_b);
+                let dist = 1e-9 * Self::dot_distance(&pos_a, &pos_b);
 
-                energy_diff += DIFF_POLARIZATION[i][j] / dist;
-                energy_same += SAME_POLARIZATION[i][j] / dist;
+                energy_same += dev_a * dev_b_pos * E_CHARGE * E_CHARGE / dist;
+                energy_diff += dev_a * dev_b_neg * E_CHARGE * E_CHARGE / dist;
             }
         }
 
@@ -379,13 +386,17 @@ impl SimulationModelTrait for BistableModel {
     fn initiate(
         &mut self,
         layers: Box<Vec<QCALayer>>,
-        _qca_architetures_map: HashMap<String, QCACellArchitecture>,
+        qca_architetures_map: HashMap<String, QCACellArchitecture>,
     ) {
         self.index_cells_static_map.clear();
         self.index_cells_read_map.clear();
         self.cell_input_map.clear();
+        self.layer_map.clear();
+        self.cell_architectures_map = qca_architetures_map;
+
         let mut input_count = 0;
         layers.iter().enumerate().for_each(|(i, layer)| {
+            self.layer_map.insert(i, layer.clone());
             layer.cells.iter().enumerate().for_each(|(j, cell)| {
                 let cell_index = QCACellIndex::new(i, j);
                 match cell.typ {
@@ -406,48 +417,53 @@ impl SimulationModelTrait for BistableModel {
         });
         self.index_cells_write_map = self.index_cells_read_map.clone();
 
+        let permitivity = self.model_settings.relative_permitivity;
+        let radius = self.model_settings.neighborhood_radius;
+
         let all_cells_iter = self
             .index_cells_static_map
             .iter()
             .chain(self.index_cells_read_map.iter());
 
-        let tmp_polarizations: Vec<f64> = all_cells_iter
-            .clone()
-            .map(|(_, c)| {
-                (c.dot_probability_distribution[0] - c.dot_probability_distribution[1]
-                    + c.dot_probability_distribution[2]
-                    - c.dot_probability_distribution[3])
-                    / c.dot_probability_distribution.iter().sum::<f64>()
-            })
-            .collect();
+        let mut neighborhood_map: HashMap<QCACellIndex, Vec<BistableNeighbor>> = HashMap::new();
 
-        self.active_layer = 0;
-        self.polarizations = [tmp_polarizations.clone(), tmp_polarizations.clone()];
-
-        let permitivity = self.model_settings.relative_permitivity;
-        self.neighborhood_map.clear();
         all_cells_iter.clone().for_each(|(index_i, cell_i)| {
-            all_cells_iter.clone().for_each(|(index_j, cell_j)| {
-                if (index_i != index_j)
-                    && BistableModel::cell_distance(cell_i, cell_j)
-                        <= self.model_settings.neighborhood_radius
-                {
-                    if !self.neighborhood_map.contains_key(&index_i) {
-                        self.neighborhood_map.insert(index_i.clone(), vec![]);
-                    }
+            let arch_i = &self.cell_architectures_map
+                [&self.layer_map[&index_i.layer].cell_architecture_id];
+            let num_components_i = arch_i.dot_count as usize / 4;
 
-                    let kink_energy =
-                        BistableModel::determine_kink_energy(cell_i, cell_j, permitivity);
-                    self.neighborhood_map
-                        .get_mut(index_i)
-                        .unwrap()
-                        .push(BistableNeighbor {
-                            cell_index: index_j.clone(),
-                            kink_energy,
-                        });
+            all_cells_iter.clone().for_each(|(index_j, cell_j)| {
+                if index_i == index_j || BistableModel::cell_distance(cell_i, cell_j) > radius {
+                    return;
                 }
-            })
+
+                let arch_j = &self.cell_architectures_map
+                    [&self.layer_map[&index_j.layer].cell_architecture_id];
+                let num_components_j = arch_j.dot_count as usize / 4;
+
+                let kink_energy: Vec<Vec<f64>> = (0..num_components_i)
+                    .map(|k| {
+                        (0..num_components_j)
+                            .map(|l| {
+                                BistableModel::determine_kink_energy(
+                                    cell_i, arch_i, k, cell_j, arch_j, l, permitivity,
+                                )
+                            })
+                            .collect()
+                    })
+                    .collect();
+
+                neighborhood_map
+                    .entry(index_i.clone())
+                    .or_insert_with(Vec::new)
+                    .push(BistableNeighbor {
+                        cell_index: index_j.clone(),
+                        kink_energy,
+                    });
+            });
         });
+
+        self.neighborhood_map = neighborhood_map;
     }
 
     fn pre_calculate(&mut self, clock_states: &[f64; 4], input_states: &Vec<f64>) {
@@ -459,31 +475,48 @@ impl SimulationModelTrait for BistableModel {
         );
         self.index_cells_write_map = self.index_cells_read_map.clone();
 
+        let layer_map = &self.layer_map;
+        let cell_architectures_map = &self.cell_architectures_map;
+        let cell_input_map = &self.cell_input_map;
+
         self.index_cells_static_map
             .iter_mut()
             .for_each(|(index, cell)| {
                 if cell.typ == CellType::Input {
-                    let input_index = self.cell_input_map.get(index).unwrap();
-                    let polarization = input_states[*input_index];
+                    let layer = layer_map.get(&index.layer).unwrap();
+                    let architecture = cell_architectures_map
+                        .get(&layer.cell_architecture_id)
+                        .unwrap();
+                    let num_components = architecture.dot_count as usize / 4;
+
+                    let input_index = *cell_input_map.get(index).unwrap();
+                    let input = input_states[(num_components * input_index)
+                        ..(num_components * input_index + num_components)]
+                        .to_vec();
                     cell.dot_probability_distribution =
-                        polarization_to_dot_probability_distribution(&[polarization]);
+                        polarization_to_dot_probability_distribution(&input);
                 }
             });
     }
 
     fn calculate(&mut self, cell_ind: QCACellIndex) -> bool {
-        let cell_options = self.index_cells_write_map.get_mut(&cell_ind);
+        let cell_options = self.index_cells_write_map.get(&cell_ind);
         if cell_options.is_none() {
             return true;
         }
         let mut cell = cell_options.unwrap().clone();
 
-        let mut polar_math = self
-            .neighborhood_map
-            .get(&cell_ind)
-            .unwrap()
-            .iter()
-            .map(|neighbour| {
+        let layer = self.layer_map.get(&cell_ind.layer).unwrap();
+        let architecture = self
+            .cell_architectures_map
+            .get(&layer.cell_architecture_id)
+            .unwrap();
+        let num_components = architecture.dot_count as usize / 4;
+
+        let mut effective_field = vec![0.0; num_components];
+
+        if let Some(neighbors) = self.neighborhood_map.get(&cell_ind) {
+            for neighbour in neighbors {
                 let neighbour_cell = {
                     if let Some(neighbour_cell) =
                         self.index_cells_read_map.get(&neighbour.cell_index)
@@ -499,26 +532,52 @@ impl SimulationModelTrait for BistableModel {
                 };
                 let neighbour_polarization = dot_probability_distribution_to_polarization(
                     &neighbour_cell.dot_probability_distribution,
-                )[0];
-                neighbour.kink_energy * neighbour_polarization
-            })
-            .sum::<f64>();
+                );
 
-        let clock_index = (cell.clock_phase_shift as i32 % 90) as usize;
+                for k in 0..num_components {
+                    for l in 0..neighbour_polarization.len() {
+                        effective_field[k] +=
+                            neighbour.kink_energy[k][l] * neighbour_polarization[l];
+                    }
+                }
+            }
+        }
 
-        polar_math /= 2.0 * self.clock_states[clock_index];
+        let clock_index = (cell.clock_phase_shift.rem_euclid(360.0) / 90.0) as usize;
+        let clock_value = 2.0 * self.clock_states[clock_index];
 
-        let new_polarization = if polar_math > 1000.0 {
-            1.0
-        } else if polar_math < -1000.0 {
-            -1.0
-        } else if f64::abs(polar_math) < 0.001 {
-            polar_math
+        // The components together share a single charge budget (the sum of
+        // their magnitudes cannot exceed 1.0, enforced by
+        // polarization_to_dot_probability_distribution), so they must be
+        // saturated together rather than independently: saturating each
+        // component on its own would discard the relative strength between
+        // components (e.g. a field that is mostly along one axis would get
+        // flattened towards an equal split across axes once both hit their
+        // individual clamp). Saturate the combined L1 magnitude with the
+        // same tanh-like curve the original scalar model used, then scale
+        // every component down proportionally so their relative weight is
+        // preserved.
+        let polar_math: Vec<f64> = effective_field.iter().map(|f| f / clock_value).collect();
+        let l1: f64 = polar_math.iter().map(|v| v.abs()).sum();
+
+        let saturated_l1 = if l1 > 1000.0 {
+            1.0 - 1e-9
+        } else if l1 < 0.001 {
+            l1
         } else {
-            polar_math / f64::sqrt(1.0 + polar_math * polar_math)
+            l1 / f64::sqrt(1.0 + l1 * l1)
         };
 
-        let new_dot_probability = polarization_to_dot_probability_distribution(&[new_polarization]);
+        let new_polarization: Vec<f64> = if l1 > 0.0 {
+            polar_math
+                .iter()
+                .map(|v| v / l1 * saturated_l1)
+                .collect()
+        } else {
+            vec![0.0; num_components]
+        };
+
+        let new_dot_probability = polarization_to_dot_probability_distribution(&new_polarization);
         let mut stable = true;
         for i in 0..new_dot_probability.len() {
             if (new_dot_probability[i] - cell.dot_probability_distribution[i]).abs()
@@ -528,6 +587,8 @@ impl SimulationModelTrait for BistableModel {
             }
         }
         cell.dot_probability_distribution = new_dot_probability;
+
+        self.index_cells_write_map.insert(cell_ind, cell);
 
         stable
     }
