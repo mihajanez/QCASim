@@ -40,7 +40,13 @@ pub struct BistableModelSettings {
     #[serde_inline_default(1e-3)]
     convergence_tolerance: f64,
 
-    #[serde_inline_default(150.0)]
+    // Covers axis-aligned *and* diagonal nearest neighbors on a 60nm grid
+    // (diagonal spacing ~84.85nm) without reaching the next ring of cells
+    // two hops away (120nm). A radius large enough to pull in those more
+    // distant cells adds competing, weaker couplings that fight the direct
+    // neighbor's signal and drag cells towards an ambiguous, unsaturated
+    // state instead of cleanly latching to an input.
+    #[serde_inline_default(90.0)]
     neighborhood_radius: f64,
 
     #[serde_inline_default(12.9)]
