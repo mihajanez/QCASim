@@ -204,52 +204,82 @@ impl BistableModel {
             polarization_to_dot_probability_distribution(&polarization)
         };
 
-        let occ_a_pos = occupation(num_components_a, component_a, 1.0);
-        let occ_a_neg = occupation(num_components_a, component_a, -1.0);
-        let occ_b_pos = occupation(num_components_b, component_b, 1.0);
-        let occ_b_neg = occupation(num_components_b, component_b, -1.0);
+        // Raw pairwise Coulomb sum for one specific (component_a, component_b)
+        // pair, before any sign/magnitude correction.
+        let raw_energy = |component_a: usize, component_b: usize| -> f64 {
+            let occ_a_pos = occupation(num_components_a, component_a, 1.0);
+            let occ_a_neg = occupation(num_components_a, component_a, -1.0);
+            let occ_b_pos = occupation(num_components_b, component_b, 1.0);
+            let occ_b_neg = occupation(num_components_b, component_b, -1.0);
 
-        let mut energy: f64 = 0.0;
-
-        for i in 0..n_a {
-            let dipole_a = occ_a_pos[i] - occ_a_neg[i];
-            if dipole_a == 0.0 {
-                continue;
-            }
-            let pos_a = Self::get_dot_position(i, cell_a, arch_a);
-
-            for j in 0..n_b {
-                let dipole_b = occ_b_pos[j] - occ_b_neg[j];
-                if dipole_b == 0.0 {
+            let mut energy: f64 = 0.0;
+            for i in 0..n_a {
+                let dipole_a = occ_a_pos[i] - occ_a_neg[i];
+                if dipole_a == 0.0 {
                     continue;
                 }
-                let pos_b = Self::get_dot_position(j, cell_b, arch_b);
-                let dist = 1e-9 * Self::dot_distance(&pos_a, &pos_b);
+                let pos_a = Self::get_dot_position(i, cell_a, arch_a);
 
-                energy += dipole_a * dipole_b * E_CHARGE * E_CHARGE / dist;
+                for j in 0..n_b {
+                    let dipole_b = occ_b_pos[j] - occ_b_neg[j];
+                    if dipole_b == 0.0 {
+                        continue;
+                    }
+                    let pos_b = Self::get_dot_position(j, cell_b, arch_b);
+                    let dist = 1e-9 * Self::dot_distance(&pos_a, &pos_b);
+
+                    energy += dipole_a * dipole_b * E_CHARGE * E_CHARGE / dist;
+                }
             }
-        }
-
-        // A cell's own component driving its own component (component_a ==
-        // component_b) is, by definition, what makes a chain of same-architecture
-        // cells behave as a *wire*: matching polarization must be the
-        // energetically favorable (same-sign, non-inverting) configuration, or
-        // a straight run of cells would flip sign every hop instead of carrying
-        // a signal through unchanged. That holds for the classic 4-dot cell and
-        // for this architecture's axis-aligned component pair (dots 0/2/4/6),
-        // where each cell's "hot" dot sits directly on the line to an
-        // axis-neighbor. But for the diagonal component pair (dots 1/3/5/7),
-        // none of the charged dots point straight at an axis-aligned neighbor -
-        // the interaction is spread across two off-axis dots on each side - and
-        // the raw pairwise Coulomb sum above comes out with the opposite sign
-        // for that geometry, which would silently invert every hop instead.
-        // Restore the same-component "matching is favorable" invariant that
-        // defines wire behavior; only the magnitude is architecture/geometry
-        // dependent, not this sign.
-        let energy = if component_a == component_b {
-            energy.abs()
-        } else {
             energy
+        };
+
+        let energy = if component_a == component_b {
+            // A cell's own component driving its own component is, by
+            // definition, what makes a chain of same-architecture cells behave
+            // as a *wire*, and what lets a multi-way cell (like this tri-state
+            // architecture's two polarization components) act as a fair,
+            // symmetric multi-valued signal rather than favoring whichever
+            // value happens to sit on the geometrically "luckier" pair of dots:
+            //
+            // - Matching polarization must be the energetically favorable
+            //   (same-sign, non-inverting) configuration for every component,
+            //   or a straight run of cells carrying that component would flip
+            //   sign every hop instead of carrying a signal through unchanged.
+            //   That holds for the classic 4-dot cell and for this
+            //   architecture's axis-aligned component (dots 0/2/4/6), where
+            //   each cell's "hot" dot sits directly on the line to an
+            //   axis-neighbor. But for the diagonal component (dots 1/3/5/7),
+            //   none of the charged dots point straight at an axis-aligned
+            //   neighbor - the interaction is spread across two off-axis dots
+            //   on each side - and the raw pairwise sum above comes out with
+            //   the opposite sign for that geometry, silently inverting every
+            //   hop instead.
+            // - The *magnitude* of that same raw sum also differs between the
+            //   two components (axis-aligned dots sit closer to an
+            //   axis-aligned neighbor than diagonal dots do), which then makes
+            //   a single vote cast on one component able to outweigh two
+            //   votes cast on the other in any circuit - like a majority gate
+            //   - where different input lines happen to use different
+            //   components. A cell's three polarization states (the two signs
+            //   of each of its two components) are meant to be equally valid,
+            //   equally strong signal levels, not weighted by which pair of
+            //   dots happens to encode them.
+            //
+            // Use the strongest magnitude among every component this
+            // architecture has (falling back to this pair's own magnitude
+            // when it only has one, i.e. the classic cell) rather than
+            // diluting it towards the weaker one: a vote cast on the weaker
+            // component should be brought up to full strength so every
+            // signal level still latches cleanly, not have every vote
+            // watered down to the lowest common strength. Restore the
+            // "matching is favorable" sign on top of it.
+            let num_components = num_components_a.min(num_components_b);
+            (0..num_components)
+                .map(|c| raw_energy(c, c).abs())
+                .fold(0.0_f64, f64::max)
+        } else {
+            raw_energy(component_a, component_b)
         };
 
         -(1.0 / (FOUR_PI_EPSILON * permitivity)) * energy
@@ -587,15 +617,25 @@ impl SimulationModelTrait for BistableModel {
 
         // The components together share a single charge budget (the sum of
         // their magnitudes cannot exceed 1.0, enforced by
-        // polarization_to_dot_probability_distribution), so they must be
-        // saturated together rather than independently: saturating each
-        // component on its own would discard the relative strength between
-        // components (e.g. a field that is mostly along one axis would get
-        // flattened towards an equal split across axes once both hit their
-        // individual clamp). Saturate the combined L1 magnitude with the
-        // same tanh-like curve the original scalar model used, then scale
-        // every component down proportionally so their relative weight is
-        // preserved.
+        // polarization_to_dot_probability_distribution). A cell with several
+        // components (e.g. this architecture's tri-state cells) represents a
+        // genuinely multi-valued signal - each component/sign combination is
+        // a distinct, mutually exclusive state the cell can settle into, the
+        // way a real bistable cell commits to one energy well rather than
+        // averaging between them. So when several neighbors pull in favor of
+        // different components (e.g. a majority-gate junction fed by input
+        // lines that don't all happen to use the same component), the cell
+        // must commit to whichever single component has the strongest net
+        // pull, not blend proportionally across all of them: proportional
+        // blending can't ever produce a definite k-out-of-n majority decision
+        // - two weaker votes agreeing on one component and a single stronger
+        // vote on another would settle on a fixed in-between ratio rather
+        // than committing to the majority side. Saturate the combined L1
+        // magnitude with the same tanh-like curve the original scalar model
+        // used (representing overall confidence across every component, so a
+        // near-tied field still ends up weakly polarized rather than
+        // snapping hard to a coin flip), then apply all of that saturated
+        // magnitude to the single dominant component and zero the rest.
         let polar_math: Vec<f64> = effective_field.iter().map(|f| f / clock_value).collect();
         let l1: f64 = polar_math.iter().map(|v| v.abs()).sum();
 
@@ -607,14 +647,15 @@ impl SimulationModelTrait for BistableModel {
             l1 / f64::sqrt(1.0 + l1 * l1)
         };
 
-        let new_polarization: Vec<f64> = if l1 > 0.0 {
-            polar_math
+        let mut new_polarization = vec![0.0; num_components];
+        if l1 > 0.0 {
+            let (dominant, &dominant_value) = polar_math
                 .iter()
-                .map(|v| v / l1 * saturated_l1)
-                .collect()
-        } else {
-            vec![0.0; num_components]
-        };
+                .enumerate()
+                .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap())
+                .unwrap();
+            new_polarization[dominant] = dominant_value.signum() * saturated_l1;
+        }
 
         let new_dot_probability = polarization_to_dot_probability_distribution(&new_polarization);
         let mut stable = true;
