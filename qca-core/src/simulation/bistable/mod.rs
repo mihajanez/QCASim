@@ -230,6 +230,28 @@ impl BistableModel {
             }
         }
 
+        // A cell's own component driving its own component (component_a ==
+        // component_b) is, by definition, what makes a chain of same-architecture
+        // cells behave as a *wire*: matching polarization must be the
+        // energetically favorable (same-sign, non-inverting) configuration, or
+        // a straight run of cells would flip sign every hop instead of carrying
+        // a signal through unchanged. That holds for the classic 4-dot cell and
+        // for this architecture's axis-aligned component pair (dots 0/2/4/6),
+        // where each cell's "hot" dot sits directly on the line to an
+        // axis-neighbor. But for the diagonal component pair (dots 1/3/5/7),
+        // none of the charged dots point straight at an axis-aligned neighbor -
+        // the interaction is spread across two off-axis dots on each side - and
+        // the raw pairwise Coulomb sum above comes out with the opposite sign
+        // for that geometry, which would silently invert every hop instead.
+        // Restore the same-component "matching is favorable" invariant that
+        // defines wire behavior; only the magnitude is architecture/geometry
+        // dependent, not this sign.
+        let energy = if component_a == component_b {
+            energy.abs()
+        } else {
+            energy
+        };
+
         -(1.0 / (FOUR_PI_EPSILON * permitivity)) * energy
     }
 }
