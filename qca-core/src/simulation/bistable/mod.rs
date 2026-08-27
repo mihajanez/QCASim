@@ -161,11 +161,26 @@ impl BistableModel {
     /// Kink energy between polarization component `component_a` of `cell_a`
     /// and polarization component `component_b` of `cell_b`. Generalizes the
     /// classic 2-state (4-dot) bistable kink energy to cells with any
-    /// dot_count by deriving each dot's charge deviation from the cell's
-    /// average charge (2 electrons spread over `dot_count` dots) directly
-    /// from `polarization_to_dot_probability_distribution`, then summing the
-    /// pairwise Coulomb interaction over every dot pair using the actual
-    /// dot geometry of each cell's architecture.
+    /// dot_count by deriving each dot's charge dipole (the difference between
+    /// the dot's occupation when the component is fully +1 versus fully -1)
+    /// directly from `polarization_to_dot_probability_distribution`, then
+    /// summing the pairwise Coulomb interaction over every dot pair using the
+    /// actual dot geometry of each cell's architecture.
+    ///
+    /// Both cells' contributions MUST be built the same way (here, the
+    /// symmetric pos-minus-neg dipole) rather than one being measured against
+    /// the pos-minus-neg dipole and the other against the pos-minus-average
+    /// baseline: the latter leaves a residual "how does the +1 state differ
+    /// from no polarization at all" term on the asymmetric side that isn't
+    /// present on the other, which is fine for a single-component cell
+    /// (component_a == component_b, where that residual is orthogonal to the
+    /// other cell's dipole and cancels) but silently breaks the physical
+    /// symmetry of the Coulomb interaction - kink_energy(a, ca, b, cb) must
+    /// equal kink_energy(b, cb, a, ca) - for cross-component terms
+    /// (component_a != component_b), which multi-component (tri-state+)
+    /// architectures rely on. That asymmetry was making cells fed only by
+    /// weak cross-component neighbors settle on a spurious, input-independent
+    /// polarization instead of tracking their actual neighbors.
     fn determine_kink_energy(
         cell_a: &QCACell,
         arch_a: &QCACellArchitecture,
@@ -182,8 +197,6 @@ impl BistableModel {
         let n_b = arch_b.dot_count as usize;
         let num_components_a = n_a / 4;
         let num_components_b = n_b / 4;
-        let baseline_a = 2.0 / n_a as f64;
-        let baseline_b = 2.0 / n_b as f64;
 
         let occupation = |num_components: usize, component: usize, sign: f64| {
             let mut polarization = vec![0.0; num_components];
@@ -192,34 +205,32 @@ impl BistableModel {
         };
 
         let occ_a_pos = occupation(num_components_a, component_a, 1.0);
+        let occ_a_neg = occupation(num_components_a, component_a, -1.0);
         let occ_b_pos = occupation(num_components_b, component_b, 1.0);
         let occ_b_neg = occupation(num_components_b, component_b, -1.0);
 
-        let mut energy_same: f64 = 0.0;
-        let mut energy_diff: f64 = 0.0;
+        let mut energy: f64 = 0.0;
 
         for i in 0..n_a {
-            let dev_a = occ_a_pos[i] - baseline_a;
-            if dev_a == 0.0 {
+            let dipole_a = occ_a_pos[i] - occ_a_neg[i];
+            if dipole_a == 0.0 {
                 continue;
             }
             let pos_a = Self::get_dot_position(i, cell_a, arch_a);
 
             for j in 0..n_b {
-                let dev_b_pos = occ_b_pos[j] - baseline_b;
-                let dev_b_neg = occ_b_neg[j] - baseline_b;
-                if dev_b_pos == 0.0 && dev_b_neg == 0.0 {
+                let dipole_b = occ_b_pos[j] - occ_b_neg[j];
+                if dipole_b == 0.0 {
                     continue;
                 }
                 let pos_b = Self::get_dot_position(j, cell_b, arch_b);
                 let dist = 1e-9 * Self::dot_distance(&pos_a, &pos_b);
 
-                energy_same += dev_a * dev_b_pos * E_CHARGE * E_CHARGE / dist;
-                energy_diff += dev_a * dev_b_neg * E_CHARGE * E_CHARGE / dist;
+                energy += dipole_a * dipole_b * E_CHARGE * E_CHARGE / dist;
             }
         }
 
-        (1.0 / (FOUR_PI_EPSILON * permitivity)) * (energy_diff - energy_same)
+        -(1.0 / (FOUR_PI_EPSILON * permitivity)) * energy
     }
 }
 
