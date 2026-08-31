@@ -130,14 +130,14 @@ def _cmp_memory_cell(row: list[str]) -> float:
     
 def _cmp_flipflop1(row: list[str]) -> float:
     truth_table = {
-        ('A', 'A'): 'B',
+        ('A', 'A'): 'A',
         ('A', 'B'): 'A',
-        ('A', 'C'): 'B',
+        ('A', 'C'): 'A',
         ('B', 'A'): 'B',
-        ('B', 'B'): 'B',
-        ('B', 'C'): 'B',
-        ('C', 'A'): 'C',
-        ('C', 'B'): 'B',
+        ('B', 'B'): 'A',
+        ('B', 'C'): 'A',
+        ('C', 'A'): 'A',
+        ('C', 'B'): 'C',
         ('C', 'C'): 'C',
     }
 
