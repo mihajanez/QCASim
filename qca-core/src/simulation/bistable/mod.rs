@@ -60,14 +60,18 @@ pub struct BistableClockGeneratorSettings {
     num_cycles: usize,
 
     // Clock amplitudes are compared directly against kink energies, which
-    // are real Coulomb interaction energies in joules (~1e-19 to 1e-23 J for
-    // nanometer-scale QCA cells) - not the arbitrary small/large numbers
-    // used previously, which were many orders of magnitude off and left
-    // every cell effectively unable to switch.
-    #[serde_inline_default(1e-25)]
+    // determine_kink_energy() expresses in meV - the same unit ICHA's
+    // Hamiltonian (and so its own clock amplitude) uses - rather than the
+    // arbitrary small/large numbers used previously, which were many
+    // orders of magnitude off and left every cell effectively unable to
+    // switch. Real nanometer-scale QCA kink energies land around 1e-4 to a
+    // few hundred meV, not the 0-2 range ICHA's own defaults use - the two
+    // models' Hamiltonians don't share a zero point, so matching units
+    // doesn't mean matching numbers.
+    #[serde_inline_default(1e-25 * 1_000.0 / 1.602_176_634e-19)]
     amplitude_min: f64,
 
-    #[serde_inline_default(1e-19)]
+    #[serde_inline_default(1e-19 * 1_000.0 / 1.602_176_634e-19)]
     amplitude_max: f64,
 
     #[serde_inline_default(0)]
@@ -158,14 +162,16 @@ impl BistableModel {
         ((a[0] - b[0]).powf(2.0) + (a[1] - b[1]).powf(2.0)).sqrt()
     }
 
-    /// Kink energy between polarization component `component_a` of `cell_a`
-    /// and polarization component `component_b` of `cell_b`. Generalizes the
-    /// classic 2-state (4-dot) bistable kink energy to cells with any
-    /// dot_count by deriving each dot's charge dipole (the difference between
-    /// the dot's occupation when the component is fully +1 versus fully -1)
-    /// directly from `polarization_to_dot_probability_distribution`, then
-    /// summing the pairwise Coulomb interaction over every dot pair using the
-    /// actual dot geometry of each cell's architecture.
+    /// Kink energy, in meV, between polarization component `component_a` of
+    /// `cell_a` and polarization component `component_b` of `cell_b` (meV
+    /// rather than raw joules to match the unit ICHA's Hamiltonian - and so
+    /// its clock amplitude - uses). Generalizes the classic 2-state (4-dot)
+    /// bistable kink energy to cells with any dot_count by deriving each
+    /// dot's charge dipole (the difference between the dot's occupation when
+    /// the component is fully +1 versus fully -1) directly from
+    /// `polarization_to_dot_probability_distribution`, then summing the
+    /// pairwise Coulomb interaction over every dot pair using the actual dot
+    /// geometry of each cell's architecture.
     ///
     /// Both cells' contributions MUST be built the same way (here, the
     /// symmetric pos-minus-neg dipole) rather than one being measured against
@@ -190,7 +196,8 @@ impl BistableModel {
         component_b: usize,
         permitivity: f64,
     ) -> f64 {
-        const E_CHARGE: f64 = 1.602_176_634e-19;
+        const E_CHARGE: f64 = 1.602_176_634e-19; // Coulombs [C]
+        const EV_PER_J: f64 = 1.0 / E_CHARGE; // eV per joule - same conversion ICHA's calculate_vq uses
         const FOUR_PI_EPSILON: f64 = 1.11265005597565794635320037482e-10;
 
         let n_a = arch_a.dot_count as usize;
@@ -228,7 +235,14 @@ impl BistableModel {
                     let pos_b = Self::get_dot_position(j, cell_b, arch_b);
                     let dist = 1e-9 * Self::dot_distance(&pos_a, &pos_b);
 
-                    energy += dipole_a * dipole_b * E_CHARGE * E_CHARGE / dist;
+                    // Coulomb energy in raw joules is dipole_a * dipole_b *
+                    // E_CHARGE^2 / dist, but a joule is enormous next to a
+                    // single electron's atomic-scale interactions (1 eV is
+                    // already 1.602e-19 J) - express it in meV instead, like
+                    // ICHA's Hamiltonian does, so the two models' clock
+                    // amplitudes live on the same human-scale unit.
+                    let energy_joules = dipole_a * dipole_b * E_CHARGE * E_CHARGE / dist;
+                    energy += energy_joules * EV_PER_J * 1_000.0;
                 }
             }
             energy
