@@ -242,42 +242,45 @@ impl BistableModel {
             // symmetric multi-valued signal rather than favoring whichever
             // value happens to sit on the geometrically "luckier" pair of dots:
             //
-            // - Matching polarization must be the energetically favorable
-            //   (same-sign, non-inverting) configuration for every component,
-            //   or a straight run of cells carrying that component would flip
-            //   sign every hop instead of carrying a signal through unchanged.
-            //   That holds for the classic 4-dot cell and for this
-            //   architecture's axis-aligned component (dots 0/2/4/6), where
-            //   each cell's "hot" dot sits directly on the line to an
-            //   axis-neighbor. But for the diagonal component (dots 1/3/5/7),
-            //   none of the charged dots point straight at an axis-aligned
-            //   neighbor - the interaction is spread across two off-axis dots
-            //   on each side - and the raw pairwise sum above comes out with
-            //   the opposite sign for that geometry, silently inverting every
-            //   hop instead.
-            // - The *magnitude* of that same raw sum also differs between the
-            //   two components (axis-aligned dots sit closer to an
-            //   axis-aligned neighbor than diagonal dots do), which then makes
-            //   a single vote cast on one component able to outweigh two
-            //   votes cast on the other in any circuit - like a majority gate
-            //   - where different input lines happen to use different
-            //   components. A cell's three polarization states (the two signs
-            //   of each of its two components) are meant to be equally valid,
-            //   equally strong signal levels, not weighted by which pair of
-            //   dots happens to encode them.
+            // Whether matching polarization is energetically favorable
+            // (same-sign, "pass-through") or unfavorable (opposite-sign,
+            // "alternating") is a genuine physical property of each
+            // component's dot geometry, not something that can be assumed
+            // uniform across components: this architecture's axis-aligned
+            // component (dots 0/2/4/6) has each cell's "hot" dot sitting
+            // directly on the line to an axis-neighbor, which does behave
+            // like the classic 4-dot cell (alternating). The diagonal
+            // component (dots 1/3/5/7) spreads its charge across two
+            // off-axis dots on each side instead, which is not the same
+            // interaction and does not have to (and empirically does not,
+            // matching the ICHA reference model) share the classic cell's
+            // sign - it passes a signal through unchanged instead of
+            // alternating it. So each component's *sign* here must come
+            // from its own raw pairwise sum, not be coerced to match the
+            // others.
             //
-            // Use the strongest magnitude among every component this
+            // The *magnitude* of that raw sum does still differ between
+            // components (axis-aligned dots sit closer to an axis-aligned
+            // neighbor than diagonal dots do), which would let a single vote
+            // cast on one component outweigh two votes cast on the other in
+            // any circuit - like a majority gate - where different input
+            // lines happen to use different components. Normalize only the
+            // magnitude to the strongest among every component this
             // architecture has (falling back to this pair's own magnitude
-            // when it only has one, i.e. the classic cell) rather than
-            // diluting it towards the weaker one: a vote cast on the weaker
-            // component should be brought up to full strength so every
-            // signal level still latches cleanly, not have every vote
-            // watered down to the lowest common strength. Restore the
-            // "matching is favorable" sign on top of it.
+            // when it only has one, i.e. the classic cell), while keeping
+            // each component's own sign, so every signal level latches
+            // equally strongly without altering which configuration that
+            // component treats as favorable.
             let num_components = num_components_a.min(num_components_b);
-            (0..num_components)
+            let max_magnitude = (0..num_components)
                 .map(|c| raw_energy(c, c).abs())
-                .fold(0.0_f64, f64::max)
+                .fold(0.0_f64, f64::max);
+            let own_energy = raw_energy(component_a, component_a);
+            if own_energy == 0.0 {
+                0.0
+            } else {
+                -own_energy.signum() * max_magnitude
+            }
         } else {
             raw_energy(component_a, component_b)
         };
