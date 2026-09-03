@@ -29,6 +29,16 @@ pub struct BistableModel {
     neighborhood_map: HashMap<QCACellIndex, Vec<BistableNeighbor>>,
     model_settings: BistableModelSettings,
     clock_settings: BistableClockGeneratorSettings,
+    // Snapshot of every cell's polarization as of the end of the *previous
+    // sample* - not the previous inner iteration, which pre_calculate() is
+    // re-entered for every time round the "while !stable" loop. Refreshed
+    // only when pre_calculate() sees new clock/input values (see below),
+    // giving calculate() a stable per-sample anchor for under-relaxation
+    // that survives however many inner iterations a sample takes to
+    // converge.
+    sample_anchor_map: HashMap<QCACellIndex, QCACell>,
+    last_clock_states: Option<[f64; 4]>,
+    last_input_states: Option<Vec<f64>>,
 }
 
 #[serde_inline_default]
@@ -130,6 +140,9 @@ impl BistableModel {
             neighborhood_map: HashMap::new(),
             model_settings: BistableModelSettings::new(),
             clock_settings: BistableClockGeneratorSettings::new(),
+            sample_anchor_map: HashMap::new(),
+            last_clock_states: None,
+            last_input_states: None,
         }
     }
 
@@ -465,6 +478,9 @@ impl SimulationModelTrait for BistableModel {
         self.cell_input_map.clear();
         self.layer_map.clear();
         self.cell_architectures_map = qca_architetures_map;
+        self.sample_anchor_map.clear();
+        self.last_clock_states = None;
+        self.last_input_states = None;
 
         let mut input_count = 0;
         layers.iter().enumerate().for_each(|(i, layer)| {
@@ -539,6 +555,21 @@ impl SimulationModelTrait for BistableModel {
     }
 
     fn pre_calculate(&mut self, clock_states: &[f64; 4], input_states: &Vec<f64>) {
+        // run_simulation_internal re-invokes pre_calculate() on every pass
+        // of its "while !stable" loop, with the same clock/input values
+        // every time until that sample converges - only a genuinely new
+        // sample changes them. Refresh the under-relaxation anchor (see
+        // calculate()) only on that transition, not every inner iteration,
+        // or it would track this cell's own still-converging value instead
+        // of anchoring to the previous sample's settled one.
+        if self.last_clock_states.as_ref() != Some(clock_states)
+            || self.last_input_states.as_deref() != Some(input_states.as_slice())
+        {
+            self.sample_anchor_map = self.index_cells_write_map.clone();
+            self.last_clock_states = Some(*clock_states);
+            self.last_input_states = Some(input_states.clone());
+        }
+
         self.clock_states = clock_states.clone();
         self.input_states = input_states.clone();
         mem::swap(
@@ -589,9 +620,23 @@ impl SimulationModelTrait for BistableModel {
 
         if let Some(neighbors) = self.neighborhood_map.get(&cell_ind) {
             for neighbour in neighbors {
+                // Read neighbors from the write map (this sample's
+                // in-progress values), not the read map (frozen as of the
+                // start of this sample): the write map starts as a full
+                // clone of the read map and is overwritten cell-by-cell as
+                // this inner iteration proceeds, so it always has an entry
+                // for every non-static cell - either that cell's not-yet-
+                // updated starting value, or its fresher value if this
+                // iteration already reached it. Reading the frozen read map
+                // instead limits a signal to propagating one hop per
+                // *sample* rather than one hop per inner iteration, which a
+                // multi-hop chain with only a few samples per clock zone
+                // (e.g. a 4-phase clocked wire) may never have enough
+                // samples to fully flush through. ICHA's calculate() reads
+                // its equivalent write map for the same reason.
                 let neighbour_cell = {
                     if let Some(neighbour_cell) =
-                        self.index_cells_read_map.get(&neighbour.cell_index)
+                        self.index_cells_write_map.get(&neighbour.cell_index)
                     {
                         neighbour_cell
                     } else if let Some(neighbour_cell) =
@@ -650,14 +695,82 @@ impl SimulationModelTrait for BistableModel {
             l1 / f64::sqrt(1.0 + l1 * l1)
         };
 
-        let mut new_polarization = vec![0.0; num_components];
+        let mut target_polarization = vec![0.0; num_components];
         if l1 > 0.0 {
             let (dominant, &dominant_value) = polar_math
                 .iter()
                 .enumerate()
                 .max_by(|(_, a), (_, b)| a.abs().partial_cmp(&b.abs()).unwrap())
                 .unwrap();
-            new_polarization[dominant] = dominant_value.signum() * saturated_l1;
+            target_polarization[dominant] = dominant_value.signum() * saturated_l1;
+        }
+
+        // Under-relax: move only partway from this cell's polarization as of
+        // the *previous sample* towards the freshly computed target, rather
+        // than snapping straight to it. A clocked cell's own barrier rising
+        // pulls its target towards zero with no memory of what it just held
+        // - correct once its neighbor has actually had a chance to read it,
+        // but adjacent clock zones hand off with essentially no overlap (one
+        // zone's low-barrier plateau ends the instant the next one's
+        // begins), so a receiving cell can be left with only one sample's
+        // worth of a signal that is already collapsing away, never enough
+        // to latch on and hold for the rest of its own window. It also
+        // means two neighbors can both reach their lowest-barrier (most
+        // permissive) instant at once - e.g. right at a clock zone
+        // wrap-around, or the very first sample of a run - with neither one
+        // yet holding a real, settled signal, so an ungated snap-to-target
+        // lets that momentary pull between them latch in as a spurious,
+        // self-reinforcing commitment (kink energy favors whatever
+        // polarization already exists) instead of fading once a real
+        // driving signal actually arrives.
+        //
+        // The anchor must be sample_anchor_map's value - refreshed only once
+        // per *sample* (see pre_calculate()) - not this cell's own write-map
+        // value as it's progressively updated within the current sample's
+        // inner iterations: blending against a value that itself keeps
+        // sliding towards the target every iteration decays to the same
+        // instant snap once enough iterations run (and this inner loop
+        // iterates until it stabilizes, how ever many that takes). Anchoring
+        // to the previous sample's settled value instead makes each
+        // *sample* transition a bounded blend regardless of inner iteration
+        // count, giving a committed value several samples of persistence -
+        // enough to bridge a zero-overlap handoff - while still fully
+        // decaying over a run of samples with no supporting signal, and any
+        // already-verified steady state (current == target every sample)
+        // is unaffected either way.
+        //
+        // 0.7 was found empirically (checked against every bundled example
+        // via qca-sim, comparing to the ICHA reference): a 4-phase clocked
+        // wire (line-clocked.qcd) needs enough of it to bridge the
+        // zero-overlap handoff between adjacent zones, but too much slows a
+        // cell's own rise towards saturation so much it never gets there
+        // before its own window ends either - both failure modes show up as
+        // NaN (never confidently latching), and the range that avoids both
+        // is narrow enough that this isn't a "higher is safer" knob to
+        // nudge without re-checking.
+        const RELAXATION: f64 = 0.7;
+        let previous_sample_polarization = self
+            .sample_anchor_map
+            .get(&cell_ind)
+            .map(|c| dot_probability_distribution_to_polarization(&c.dot_probability_distribution))
+            .unwrap_or_else(|| vec![0.0; num_components]);
+        let mut new_polarization: Vec<f64> = (0..num_components)
+            .map(|i| {
+                let anchor = previous_sample_polarization.get(i).copied().unwrap_or(0.0);
+                let target = target_polarization[i];
+                anchor + RELAXATION * (target - anchor)
+            })
+            .collect();
+
+        // A convex blend of two vectors that each individually satisfy the
+        // sum(|component|) <= 1.0 budget cannot exceed it either, but
+        // floating point rounding across the blend can still land a hair
+        // over 1.0 and trip the strict check below - pull back in with the
+        // same small safety margin used elsewhere for that reason.
+        let sum_abs: f64 = new_polarization.iter().map(|v| v.abs()).sum();
+        if sum_abs > 1.0 {
+            let scale = (1.0 - 1e-9) / sum_abs;
+            new_polarization.iter_mut().for_each(|v| *v *= scale);
         }
 
         let new_dot_probability = polarization_to_dot_probability_distribution(&new_polarization);
