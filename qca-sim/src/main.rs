@@ -1,4 +1,5 @@
 use crate::analyze_logic::{get_analyze_logic_subcommand, run_analyze_logic};
+use crate::robustness::{get_robustness_subcommand, run_robustness};
 use crate::sim::{get_sim_subcommand, run_sim};
 use clap::builder::{PathBufValueParser, PossibleValuesParser};
 use clap::{Arg, Command};
@@ -8,6 +9,7 @@ use std::error::Error;
 use std::str::FromStr;
 
 mod analyze_logic;
+mod robustness;
 mod sim;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -17,6 +19,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .subcommand_required(true)
         .subcommand(get_sim_subcommand())
         .subcommand(get_analyze_logic_subcommand())
+        .subcommand(get_robustness_subcommand())
         .arg(
             Arg::new("log_file")
                 .short('l')
@@ -48,6 +51,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     match matches.subcommand() {
         Some(("sim", matches)) => run_sim(matches),
         Some(("truth", matches)) => run_analyze_logic(matches),
+        Some(("robustness", matches)) => run_robustness(matches),
         _ => Err("Invalid command".into()),
     }
 }
