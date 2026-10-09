@@ -1,8 +1,10 @@
 name: Release
 
 # A tag v* builds qca-sim for every platform, publishes a GitHub release with
-# the binaries, and pushes the container image ghcr.io/<owner>/qcasim:<version>
-# (and :latest). The Linux binaries are statically linked (musl), so they run
+# the platform archives (.tar.gz on Linux/macOS, .zip on Windows, each holding
+# qca-sim, LICENSE and README.md) plus the HPC scripts, and pushes the container image ghcr.io/<owner>/qcasim:<version>
+# (and :latest). workflow_dispatch builds the artifacts but never publishes a
+# release. The Linux binaries are statically linked (musl), so they run
 # on any Linux system, including HPC compute nodes (see hpc/frida/README.md).
 on:
   push:
@@ -28,18 +30,23 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             asset: qca-sim-linux-x86_64
+            archive: qca-sim-linux-x86_64.tar.gz
           - os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
             asset: qca-sim-linux-aarch64
+            archive: qca-sim-linux-aarch64.tar.gz
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset: qca-sim-windows-x86_64.exe
+            archive: qca-sim-windows-x86_64.zip
           - os: macos-latest
             target: aarch64-apple-darwin
             asset: qca-sim-macos-aarch64
+            archive: qca-sim-macos-aarch64.tar.gz
           - os: macos-latest
             target: x86_64-apple-darwin
             asset: qca-sim-macos-x86_64
+            archive: qca-sim-macos-x86_64.tar.gz
     steps:
       - uses: actions/checkout@v7
 
@@ -68,10 +75,28 @@ jobs:
           suffix=""; [[ "${{ matrix.target }}" == *windows* ]] && suffix=".exe"
           cp "target/${{ matrix.target }}/release/qca-sim$suffix" "dist/${{ matrix.asset }}"
 
+      - name: Package the release archive
+        shell: bash
+        run: |
+          suffix=""; [[ "${{ matrix.target }}" == *windows* ]] && suffix=".exe"
+          mkdir -p stage package
+          cp "target/${{ matrix.target }}/release/qca-sim$suffix" LICENSE README.md stage/
+          if [[ "${{ matrix.archive }}" == *.zip ]]; then
+            (cd stage && 7z a -tzip "../package/${{ matrix.archive }}" .)
+          else
+            tar czf "package/${{ matrix.archive }}" -C stage .
+          fi
+
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.asset }}
           path: dist/${{ matrix.asset }}
+          retention-days: 3
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: package-${{ matrix.archive }}
+          path: package/${{ matrix.archive }}
           retention-days: 3
 
   release:
@@ -84,18 +109,26 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           path: artifacts
+          pattern: package-*
           merge-multiple: true
 
       - name: Package the HPC scripts
         run: tar czf artifacts/qcasim-hpc-scripts.tar.gz hpc
 
       - name: Create GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref_type == 'tag' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           draft: false
           name: QCASim ${{ github.ref_name }}
-          files: artifacts/*
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/qca-sim-linux-x86_64.tar.gz
+            artifacts/qca-sim-linux-aarch64.tar.gz
+            artifacts/qca-sim-macos-aarch64.tar.gz
+            artifacts/qca-sim-macos-x86_64.tar.gz
+            artifacts/qca-sim-windows-x86_64.zip
+            artifacts/qcasim-hpc-scripts.tar.gz
 
   container:
     name: Container image
@@ -107,6 +140,7 @@ jobs:
       - uses: actions/download-artifact@v7
         with:
           path: dist
+          pattern: qca-sim-*
           merge-multiple: true
 
       - name: Name the binaries by Docker architecture
