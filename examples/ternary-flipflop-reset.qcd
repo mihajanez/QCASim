@@ -1,0 +1,1530 @@
+{
+ "qca_forge_version": "0.2.0",
+ "design": {
+  "qca_core_version": "0.1.0",
+  "layers": [
+   {
+    "name": "Main Layer",
+    "visible": true,
+    "cell_architecture_id": "tri_state_60",
+    "cells": [
+     {
+      "position": [
+       0,
+       0
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -60,
+       0
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       60,
+       0
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       60
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       -60
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -240,
+       60
+      ],
+      "clock_phase_shift": 0,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -180,
+       0
+      ],
+      "clock_phase_shift": 0,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -120,
+       0
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -180,
+       120
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -300,
+       120
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -300,
+       0
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -360,
+       180
+      ],
+      "clock_phase_shift": 0,
+      "typ": 3,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       240,
+       60
+      ],
+      "clock_phase_shift": 0,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       180,
+       0
+      ],
+      "clock_phase_shift": 0,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       120,
+       0
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       180,
+       120
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       300,
+       120
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       300,
+       0
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       360,
+       180
+      ],
+      "clock_phase_shift": 0,
+      "typ": 3,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       480
+      ],
+      "clock_phase_shift": 0,
+      "typ": 1,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": "T"
+     },
+     {
+      "position": [
+       0,
+       420
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       360
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       240
+      ],
+      "clock_phase_shift": 0,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       180
+      ],
+      "clock_phase_shift": 0,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       120
+      ],
+      "clock_phase_shift": 90,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       -120
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       0,
+       -180
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       60,
+       -240
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       120,
+       -180
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       120,
+       -300
+      ],
+      "clock_phase_shift": 180,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       180,
+       -180
+      ],
+      "clock_phase_shift": 0,
+      "typ": 3,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.0,
+       0.0,
+       0.0,
+       1.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       180,
+       -300
+      ],
+      "clock_phase_shift": 0,
+      "typ": 1,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": "R"
+     },
+     {
+      "position": [
+       0,
+       -300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 2,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": "Q"
+     },
+     {
+      "position": [
+       0,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -360,
+       -60
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       360,
+       -60
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -60,
+       300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -120,
+       300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -180,
+       240
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -120,
+       180
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       60,
+       300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       120,
+       300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       180,
+       240
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       120,
+       180
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -60,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -120,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -180,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -240,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -300,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -360,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -420,
+       -300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -420,
+       -240
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -420,
+       -180
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       -420,
+       -120
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       60,
+       -420
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       120,
+       -420
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       180,
+       -420
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       240,
+       -420
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       300,
+       -420
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       360,
+       -420
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       420,
+       -360
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       420,
+       -300
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       420,
+       -240
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       420,
+       -180
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     },
+     {
+      "position": [
+       420,
+       -120
+      ],
+      "clock_phase_shift": 270,
+      "typ": 0,
+      "rotation": 0,
+      "dot_probability_distribution": [
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25,
+       0.25
+      ],
+      "label": null
+     }
+    ],
+    "z_position": 0
+   }
+  ],
+  "cell_architectures": {
+   "tri_state_60": {
+    "id": "tri_state_60",
+    "name": "Tri state 60",
+    "side_length": 60,
+    "dot_diameter": 10,
+    "dot_count": 8,
+    "dot_positions": [
+     [
+      14.0,
+      0.0
+     ],
+     [
+      9.899494936611665,
+      9.899494936611664
+     ],
+     [
+      8.572527594031472e-16,
+      14.0
+     ],
+     [
+      -9.899494936611664,
+      9.899494936611665
+     ],
+     [
+      -14.0,
+      1.7145055188062944e-15
+     ],
+     [
+      -9.899494936611667,
+      -9.899494936611664
+     ],
+     [
+      -2.5717582782094417e-15,
+      -14.0
+     ],
+     [
+      9.899494936611664,
+      -9.899494936611667
+     ]
+    ],
+    "dot_tunnels": [
+     [
+      0,
+      1
+     ],
+     [
+      1,
+      2
+     ],
+     [
+      2,
+      3
+     ],
+     [
+      3,
+      4
+     ],
+     [
+      4,
+      5
+     ],
+     [
+      5,
+      6
+     ],
+     [
+      6,
+      7
+     ],
+     [
+      7,
+      0
+     ]
+    ]
+   }
+  },
+  "simulation_settings": {
+   "selected_simulation_model_id": "icha_model",
+   "simulation_model_settings": {
+    "icha_model": {
+     "model_settings": {
+      "max_iterations": 200,
+      "convergence_tolerance": 1e-06,
+      "relative_permitivity": 12.9,
+      "schur_max_iterations": 200,
+      "schur_convergence_tolerance": 1e-06
+     },
+     "clock_generator_settings": {
+      "num_cycles": 1,
+      "amplitude_min": 0,
+      "amplitude_max": 2,
+      "extra_periods": 0,
+      "samples_per_input": 20
+     }
+    }
+   },
+   "use_custom_input_sequence": true,
+   "custom_input_sequence": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     1,
+     1
+    ],
+    [
+     2,
+     0
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     0
+    ],
+    [
+     0,
+     1
+    ]
+   ]
+  }
+ },
+ "designer_properties": {
+  "camera_position": [
+   0,
+   0,
+   20
+  ],
+  "camera_rotation": [
+   0,
+   0,
+   0
+  ],
+  "camera_rotate_enabled": false,
+  "camera_zoom_enabled": true,
+  "camera_zoom_range": [
+   1,
+   100
+  ],
+  "cell_edit_enabled": true,
+  "cell_snapping_enabled": true,
+  "cell_snapping_divider": 60
+ }
+}

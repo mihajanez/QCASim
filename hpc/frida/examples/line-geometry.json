@@ -1,0 +1,6 @@
+{
+  "x_axis": { "parameter": "geometry.cell_size", "values": "40:80:10" },
+  "y_axis": { "parameter": "geometry.dot_radius", "values": [10, 14, 18] },
+  "expected_behavior": "wire",
+  "thresholds": { "clock": 0.05, "logical": 0.05, "value": 0.8 }
+}

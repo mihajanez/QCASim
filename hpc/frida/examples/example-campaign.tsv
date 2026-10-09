@@ -1,0 +1,6 @@
+# A small campaign; submit it from the QCASim folder with
+#   hpc/frida/submit-campaign.sh hpc/frida/examples/example-campaign.tsv
+# name                design                                     sweep configuration              [submit-sweep.sh options]
+line-geometry         ../../../examples/line.qcd                 line-geometry.json               -n 2 -c 8 -t 00:30:00
+line-thesis-grid      ../../../examples/line.qcd                 line-thesis-grid.json            -c 32 -t 02:00:00
+flipflop-geometry     ../../../examples/ternary-flipflop-reset.qcd ternary-flipflop-geometry.json -n 1 -c 9 -t 02:00:00

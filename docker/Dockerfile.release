@@ -1,0 +1,8 @@
+# Image assembled from the prebuilt static release binaries (see
+# .github/workflows/release.yml); one image per architecture.
+FROM alpine:3.22
+ARG TARGETARCH
+COPY dist/qca-sim-linux-${TARGETARCH} /usr/local/bin/qca-sim
+COPY hpc /opt/qcasim/hpc
+ENV QCASIM_HPC=/opt/qcasim/hpc
+CMD ["qca-sim", "--help"]

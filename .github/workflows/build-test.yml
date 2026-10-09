@@ -11,9 +11,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release --locked --verbose
 
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test --release --locked --verbose
+
+    - name: Check the HPC scripts
+      run: shellcheck -x -S warning hpc/frida/*.sh hpc/frida/*.sbatch
+
+    - name: Sliced sweep equals the full sweep
+      run: |
+        bin=target/release/qca-sim
+        cfg=hpc/frida/examples/line-geometry.json
+        $bin robustness plan examples/line.qcd $cfg -n 3
+        $bin robustness run examples/line.qcd $cfg -o /tmp/full.json --no-slurm
+        for i in 0 1 2; do
+          SLURM_ARRAY_TASK_ID=$i SLURM_ARRAY_TASK_COUNT=3 $bin robustness run examples/line.qcd $cfg -o /tmp/parts/run.json
+        done
+        $bin robustness merge /tmp/parts -o /tmp/merged.json
+        python3 - <<'EOF'
+        import json
+        key = lambda p: (p["ix"], p["iy"], p["accuracy"], json.dumps(p["truth_table"]))
+        full = sorted(map(key, json.load(open("/tmp/full.json"))["points"]))
+        merged = sorted(map(key, json.load(open("/tmp/merged.json"))["points"]))
+        assert full == merged, "sliced sweep differs from the full sweep"
+        print(len(full), "points identical")
+        EOF
+        $bin robustness summary --header /tmp/full.json /tmp/merged.json
