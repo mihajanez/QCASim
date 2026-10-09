@@ -200,7 +200,10 @@ fn read_design(path: &Path) -> Result<(Value, QCADesign, Value, String), Box<dyn
         .ok_or_else(|| format!("{} has no design", path.display()))?;
     let design: QCADesign = serde_json::from_value(raw.clone())
         .map_err(|e| format!("Invalid design in {}: {}", path.display(), e))?;
-    let designer_properties = file.get("designer_properties").cloned().unwrap_or(Value::Null);
+    let designer_properties = file
+        .get("designer_properties")
+        .cloned()
+        .unwrap_or(Value::Null);
     Ok((raw, design, designer_properties, fnv1a(text.as_bytes())))
 }
 
@@ -216,7 +219,10 @@ fn expand_range(value: &mut Value) -> Result<(), String> {
         .collect::<Result<_, _>>()
         .map_err(|_| format!("Invalid range '{}'", text))?;
     let [start, stop, step] = parts[..] else {
-        return Err(format!("Range '{}' must have the form start:stop:step", text));
+        return Err(format!(
+            "Range '{}' must have the form start:stop:step",
+            text
+        ));
     };
     if step <= 0.0 || stop < start {
         return Err(format!("Invalid range '{}'", text));
@@ -288,7 +294,10 @@ fn output_path(template: &Path, slice: Option<SweepSlice>) -> PathBuf {
         .extension()
         .map(|e| e.to_string_lossy().to_string())
         .unwrap_or_else(|| "json".into());
-    template.with_file_name(format!("{}.part-{}-of-{}.{}", stem, index, slice.count, ext))
+    template.with_file_name(format!(
+        "{}.part-{}-of-{}.{}",
+        stem, index, slice.count, ext
+    ))
 }
 
 fn fnv1a(bytes: &[u8]) -> String {
@@ -304,12 +313,19 @@ fn host_name() -> Option<String> {
     std::env::var("SLURMD_NODENAME")
         .ok()
         .or_else(|| std::env::var("HOSTNAME").ok())
-        .or_else(|| fs::read_to_string("/etc/hostname").ok().map(|s| s.trim().to_string()))
+        .or_else(|| {
+            fs::read_to_string("/etc/hostname")
+                .ok()
+                .map(|s| s.trim().to_string())
+        })
         .filter(|s| !s.is_empty())
 }
 
 fn slurm_job_id() -> Option<String> {
-    match (std::env::var("SLURM_ARRAY_JOB_ID"), std::env::var("SLURM_ARRAY_TASK_ID")) {
+    match (
+        std::env::var("SLURM_ARRAY_JOB_ID"),
+        std::env::var("SLURM_ARRAY_TASK_ID"),
+    ) {
         (Ok(job), Ok(task)) => Some(format!("{}_{}", job, task)),
         _ => std::env::var("SLURM_JOB_ID").ok(),
     }
@@ -422,7 +438,11 @@ fn run(m: &ArgMatches) -> Result<(), Box<dyn Error>> {
     let threads = m
         .get_one::<usize>("threads")
         .copied()
-        .or_else(|| (!m.get_flag("no-slurm")).then(|| env_usize("SLURM_CPUS_PER_TASK")).flatten())
+        .or_else(|| {
+            (!m.get_flag("no-slurm"))
+                .then(|| env_usize("SLURM_CPUS_PER_TASK"))
+                .flatten()
+        })
         .or(config.max_threads);
     config.max_threads = threads;
     if let Some(dir) = m.get_one::<PathBuf>("variants-dir") {
@@ -440,7 +460,10 @@ fn run(m: &ArgMatches) -> Result<(), Box<dyn Error>> {
             .and_then(|text| RobustnessRun::from_json(&text).ok())
             .is_some_and(|run| !run.cancelled);
         if complete {
-            eprintln!("{} already exists; nothing to do (use --force to run again)", output.display());
+            eprintln!(
+                "{} already exists; nothing to do (use --force to run again)",
+                output.display()
+            );
             return Ok(());
         }
     }
@@ -457,7 +480,11 @@ fn run(m: &ArgMatches) -> Result<(), Box<dyn Error>> {
     };
     let mut checkpoint = if completed.is_empty() {
         let mut file = File::create(&checkpoint_path)?;
-        writeln!(file, "{}", json!({"format": CHECKPOINT_FORMAT, "sweep": key}))?;
+        writeln!(
+            file,
+            "{}",
+            json!({"format": CHECKPOINT_FORMAT, "sweep": key})
+        )?;
         file
     } else {
         OpenOptions::new().append(true).open(&checkpoint_path)?
@@ -484,12 +511,17 @@ fn run(m: &ArgMatches) -> Result<(), Box<dyn Error>> {
         name,
         points_in_slice,
         config.num_points(),
-        config.slice.map(|s| format!(", slice {}/{}", s.index, s.count)).unwrap_or_default(),
+        config
+            .slice
+            .map(|s| format!(", slice {}/{}", s.index, s.count))
+            .unwrap_or_default(),
         config
             .max_threads
             .map(|t| t.to_string())
             .unwrap_or_else(|| "all".into()),
-        host_name().map(|h| format!(" on {}", h)).unwrap_or_default(),
+        host_name()
+            .map(|h| format!(" on {}", h))
+            .unwrap_or_default(),
         if completed.is_empty() {
             String::new()
         } else {
@@ -645,7 +677,10 @@ fn summary(m: &ArgMatches) -> Result<(), Box<dyn Error>> {
             accuracies.iter().filter(|a| **a >= 1.0 - 1e-9).count(),
             mean,
             if min.is_finite() { min } else { f64::NAN },
-            run.cpu_ms.unwrap_or_else(|| run.points.iter().map(|p| p.duration_ms).sum()) as f64 / 3.6e6,
+            run.cpu_ms
+                .unwrap_or_else(|| run.points.iter().map(|p| p.duration_ms).sum())
+                as f64
+                / 3.6e6,
             run.duration_ms as f64 / 1000.0,
             run.slices.len().max(1),
             file.display()
@@ -718,9 +753,21 @@ mod tests {
 
     #[test]
     fn slice_output_names() {
-        let s = Some(SweepSlice { index: 3, count: 16 });
-        assert_eq!(output_path(Path::new("out/run.json"), s), PathBuf::from("out/run.part-03-of-16.json"));
-        assert_eq!(output_path(Path::new("r_{index}.json"), s), PathBuf::from("r_03.json"));
-        assert_eq!(output_path(Path::new("run.json"), None), PathBuf::from("run.json"));
+        let s = Some(SweepSlice {
+            index: 3,
+            count: 16,
+        });
+        assert_eq!(
+            output_path(Path::new("out/run.json"), s),
+            PathBuf::from("out/run.part-03-of-16.json")
+        );
+        assert_eq!(
+            output_path(Path::new("r_{index}.json"), s),
+            PathBuf::from("r_03.json")
+        );
+        assert_eq!(
+            output_path(Path::new("run.json"), None),
+            PathBuf::from("run.json")
+        );
     }
 }

@@ -8,7 +8,10 @@ use crate::simulation::model::{ClockGeneratorSettingsTrait, SimulationModelSetti
 use crate::simulation::settings::{InputDescriptor, OptionsEntry, OptionsList};
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
-use std::{collections::{BTreeMap, HashMap}, mem};
+use std::{
+    collections::{BTreeMap, HashMap},
+    mem,
+};
 
 struct BistableNeighbor {
     cell_index: QCACellIndex,

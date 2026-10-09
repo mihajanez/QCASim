@@ -566,7 +566,12 @@ fn compute_truth_table(
         thresholds.logical,
         thresholds.value,
     );
-    let num_rows = table.entries.iter().map(|(_, v)| v.len()).max().unwrap_or(0);
+    let num_rows = table
+        .entries
+        .iter()
+        .map(|(_, v)| v.len())
+        .max()
+        .unwrap_or(0);
     let rows = (0..num_rows)
         .map(|i| {
             table
@@ -662,8 +667,14 @@ impl FromStr for SweepSlice {
             .split_once('/')
             .ok_or_else(|| format!("Slice '{}' must have the form <index>/<count>", s))?;
         let slice = SweepSlice {
-            index: index.trim().parse().map_err(|_| format!("Invalid slice index '{}'", index))?,
-            count: count.trim().parse().map_err(|_| format!("Invalid slice count '{}'", count))?,
+            index: index
+                .trim()
+                .parse()
+                .map_err(|_| format!("Invalid slice index '{}'", index))?,
+            count: count
+                .trim()
+                .parse()
+                .map_err(|_| format!("Invalid slice count '{}'", count))?,
         };
         slice.validate()?;
         Ok(slice)
@@ -930,7 +941,12 @@ struct SweepContext {
     app_version: String,
 }
 
-fn run_job(context: &SweepContext, job: &SweepJob, cancel: &AtomicBool, on_progress: impl FnMut(f64)) -> Option<SweepPoint> {
+fn run_job(
+    context: &SweepContext,
+    job: &SweepJob,
+    cancel: &AtomicBool,
+    on_progress: impl FnMut(f64),
+) -> Option<SweepPoint> {
     let start = Instant::now();
     let mut point = SweepPoint {
         ix: job.ix,
@@ -972,16 +988,15 @@ fn run_job(context: &SweepContext, job: &SweepJob, cancel: &AtomicBool, on_progr
         point.row_accuracy = row_accuracy;
         point.truth_table = Some(table);
         if context.config.output_dir.is_some() {
-            let (design_file, simulation_file) =
-                write_variant_files(
-                    &context.config,
-                    &context.app_version,
-                    &context.nominal_raw,
-                    &design,
-                    &simulation,
-                    job.x,
-                    job.y,
-                )?;
+            let (design_file, simulation_file) = write_variant_files(
+                &context.config,
+                &context.app_version,
+                &context.nominal_raw,
+                &design,
+                &simulation,
+                job.x,
+                job.y,
+            )?;
             point.design_file = Some(design_file);
             point.simulation_file = Some(simulation_file);
         }
@@ -1000,7 +1015,10 @@ fn run_job(context: &SweepContext, job: &SweepJob, cancel: &AtomicBool, on_progr
 fn validate_axis(nominal: &QCADesign, axis: &SweepAxis) -> Result<(SweepTarget, f64), String> {
     let target = SweepTarget::from_str(&axis.parameter)?;
     if axis.values.is_empty() {
-        return Err(format!("No values given for parameter '{}'", axis.parameter));
+        return Err(format!(
+            "No values given for parameter '{}'",
+            axis.parameter
+        ));
     }
     if axis.values.iter().any(|v| !v.is_finite()) {
         return Err(format!("Parameter '{}' has invalid values", axis.parameter));
@@ -1119,7 +1137,12 @@ pub fn run_sweep(
             .values
             .iter()
             .enumerate()
-            .map(move |(ix, x)| SweepJob { ix, iy, x: *x, y: *y })
+            .map(move |(ix, x)| SweepJob {
+                ix,
+                iy,
+                x: *x,
+                y: *y,
+            })
     });
     let in_slice = |job: &SweepJob| {
         config
@@ -1132,7 +1155,12 @@ pub fn run_sweep(
     for point in options.completed_points {
         let valid = point.ix < nx
             && point.iy < y_values.len()
-            && in_slice(&SweepJob { ix: point.ix, iy: point.iy, x: point.x, y: point.y });
+            && in_slice(&SweepJob {
+                ix: point.ix,
+                iy: point.iy,
+                x: point.x,
+                y: point.y,
+            });
         if valid && done.insert((point.ix, point.iy)) {
             points.push(point);
         }
@@ -1317,11 +1345,19 @@ impl AxisInfo {
             _ if p == "geometry.cell_size" => ("Cell size (intercell distance)".into(), Some("nm")),
             _ if p == "geometry.dot_radius" => ("Quantum dot placement radius".into(), Some("nm")),
             _ if p == "geometry.dot_diameter" => ("Quantum dot diameter".into(), Some("nm")),
-            Some(("geometry.layer_z", layer)) => (format!("Z position of layer {}", layer), Some("nm")),
-            Some(("geometry.cell_offset_x", label)) => (format!("X offset of cell {}", label), Some("nm")),
-            Some(("geometry.cell_offset_y", label)) => (format!("Y offset of cell {}", label), Some("nm")),
+            Some(("geometry.layer_z", layer)) => {
+                (format!("Z position of layer {}", layer), Some("nm"))
+            }
+            Some(("geometry.cell_offset_x", label)) => {
+                (format!("X offset of cell {}", label), Some("nm"))
+            }
+            Some(("geometry.cell_offset_y", label)) => {
+                (format!("Y offset of cell {}", label), Some("nm"))
+            }
             _ => (
-                p.split_once('.').map_or(p, |(_, name)| name).replace('_', " "),
+                p.split_once('.')
+                    .map_or(p, |(_, name)| name)
+                    .replace('_', " "),
                 None,
             ),
         };
@@ -1475,18 +1511,29 @@ pub fn merge_runs(
         count += 1;
         let same_sweep = match (&merged.config, &run.config) {
             (Some(a), Some(b)) => a.same_sweep(b),
-            (None, None) => merged.x.values == run.x.values
-                && merged.y.as_ref().map(|y| &y.values) == run.y.as_ref().map(|y| &y.values),
+            (None, None) => {
+                merged.x.values == run.x.values
+                    && merged.y.as_ref().map(|y| &y.values) == run.y.as_ref().map(|y| &y.values)
+            }
             _ => false,
         };
         if !same_sweep {
-            return Err(format!("Run '{}' is not a slice of the same sweep", run.name));
+            return Err(format!(
+                "Run '{}' is not a slice of the same sweep",
+                run.name
+            ));
         }
         if merged.model_id != run.model_id {
-            return Err(format!("Run '{}' uses a different simulation model", run.name));
+            return Err(format!(
+                "Run '{}' uses a different simulation model",
+                run.name
+            ));
         }
         if merged.columns != run.columns {
-            return Err(format!("Run '{}' has different input/output cells", run.name));
+            return Err(format!(
+                "Run '{}' has different input/output cells",
+                run.name
+            ));
         }
         if merged.reference_truth_table.is_none() {
             merged.reference_truth_table = run.reference_truth_table.clone();
@@ -1585,9 +1632,9 @@ mod tests {
     fn majority_matches_script_table() {
         // Every entry of analyze_truth.py's _cmp_majority table.
         let table = [
-            "AAAA", "AABA", "AACA", "ABAA", "ABBB", "ABCC", "ACAA", "ACBC", "ACCC", "BAAA",
-            "BABB", "BACC", "BBAB", "BBBB", "BBCB", "BCAC", "BCBB", "BCCC", "CAAA", "CABC",
-            "CACC", "CBAC", "CBBB", "CBCC", "CCAC", "CCBC", "CCCC",
+            "AAAA", "AABA", "AACA", "ABAA", "ABBB", "ABCC", "ACAA", "ACBC", "ACCC", "BAAA", "BABB",
+            "BACC", "BBAB", "BBBB", "BBCB", "BCAC", "BCBB", "BCCC", "CAAA", "CABC", "CACC", "CBAC",
+            "CBBB", "CBCC", "CCAC", "CCBC", "CCCC",
         ];
         for entry in table {
             assert_eq!(
@@ -1611,9 +1658,15 @@ mod tests {
         let flipflop = ExpectedBehavior::Flipflop1;
         // (g1, flip) -> q, row order is [flip, g1, q]
         for (flip, g1, q) in [
-            ('A', 'A', 'A'), ('B', 'A', 'A'), ('C', 'A', 'A'),
-            ('A', 'B', 'B'), ('B', 'B', 'A'), ('C', 'B', 'A'),
-            ('A', 'C', 'A'), ('B', 'C', 'C'), ('C', 'C', 'C'),
+            ('A', 'A', 'A'),
+            ('B', 'A', 'A'),
+            ('C', 'A', 'A'),
+            ('A', 'B', 'B'),
+            ('B', 'B', 'A'),
+            ('C', 'B', 'A'),
+            ('A', 'C', 'A'),
+            ('B', 'C', 'C'),
+            ('C', 'C', 'C'),
         ] {
             let r = vec![Some(flip), Some(g1), Some(q)];
             assert_eq!(flipflop.row_accuracy(&r), 1.0, "{:?}", r);
@@ -1624,7 +1677,15 @@ mod tests {
     fn ternary_flipflop_is_scored_sequentially() {
         // Columns T, R, Q: reset, toggle, toggle, hold, clear, toggle (0 stays 0), wrong hold.
         let table = TruthTableData {
-            rows: vec![row("AAA"), row("BBB"), row("BBA"), row("ABA"), row("CBC"), row("BBD"), row("ABB")],
+            rows: vec![
+                row("AAA"),
+                row("BBB"),
+                row("BBA"),
+                row("ABA"),
+                row("CBC"),
+                row("BBD"),
+                row("ABB"),
+            ],
         };
         let (accuracy, rows) = score_table(ExpectedBehavior::TernaryFlipflop, &table, None, &[]);
         assert_eq!(rows, vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0]);
@@ -1653,7 +1714,10 @@ mod tests {
     #[test]
     fn empty_table_is_fully_accurate() {
         let table = TruthTableData { rows: vec![] };
-        assert_eq!(table_accuracy(ExpectedBehavior::Wire, &table, None, &[]), 1.0);
+        assert_eq!(
+            table_accuracy(ExpectedBehavior::Wire, &table, None, &[]),
+            1.0
+        );
     }
 
     #[test]
@@ -1670,9 +1734,15 @@ mod tests {
         let contents = std::fs::read_to_string(path).unwrap();
         let mut file: Value = serde_json::from_str(&contents).unwrap();
         // Older examples predate these fields; the GUI always sends them.
-        let settings = file["design"]["simulation_settings"].as_object_mut().unwrap();
-        settings.entry("use_custom_input_sequence").or_insert(Value::Bool(false));
-        settings.entry("custom_input_sequence").or_insert(Value::Array(vec![]));
+        let settings = file["design"]["simulation_settings"]
+            .as_object_mut()
+            .unwrap();
+        settings
+            .entry("use_custom_input_sequence")
+            .or_insert(Value::Bool(false));
+        settings
+            .entry("custom_input_sequence")
+            .or_insert(Value::Array(vec![]));
         file["design"].take()
     }
 
@@ -1683,7 +1753,8 @@ mod tests {
     #[test]
     fn merge_missing_keeps_gui_fields() {
         let mut target = serde_json::json!({"layers": [{"z": 1}], "a": {"b": 2}});
-        let source = serde_json::json!({"layers": [{"z": 0, "visible": true}], "a": {"b": 3, "c": 4}});
+        let source =
+            serde_json::json!({"layers": [{"z": 0, "visible": true}], "a": {"b": 3, "c": 4}});
         merge_missing(&mut target, &source);
         assert_eq!(
             target,
@@ -1721,7 +1792,12 @@ mod tests {
 
         let variant = create_variant(
             &design,
-            &[(&offset, 5.0), (&cell_size, 120.0), (&permittivity, 10.5), (&cycles, 2.4)],
+            &[
+                (&offset, 5.0),
+                (&cell_size, 120.0),
+                (&permittivity, 10.5),
+                (&cycles, 2.4),
+            ],
         )
         .unwrap();
         let o2 = |d: &QCADesign| {
@@ -1734,12 +1810,18 @@ mod tests {
         };
         // Scaled first, then offset.
         let nominal_o2 = o2(&design);
-        assert_eq!(o2(&variant), [nominal_o2[0] * 2.0, nominal_o2[1] * 2.0 + 5.0]);
+        assert_eq!(
+            o2(&variant),
+            [nominal_o2[0] * 2.0, nominal_o2[1] * 2.0 + 5.0]
+        );
         assert_eq!(get_parameter(&variant, &cell_size).unwrap(), 120.0);
         assert_eq!(get_parameter(&variant, &permittivity).unwrap(), 10.5);
         // Whole-number options stay integers so the model can parse them.
         let settings = &variant.simulation_settings.simulation_model_settings["icha_model"];
-        assert_eq!(settings.clock_generator_settings["num_cycles"], Value::from(2u64));
+        assert_eq!(
+            settings.clock_generator_settings["num_cycles"],
+            Value::from(2u64)
+        );
         prepare_simulation(&variant).unwrap();
 
         let radius = create_variant(&design, &[(&SweepTarget::DotRadius, 20.0)]).unwrap();
@@ -1782,7 +1864,14 @@ mod tests {
                 crate::simulation::file::read_from_file(File::open(path).unwrap()).unwrap();
             let table = compute_truth_table(&design, &simulation, &HashMap::new(), thresholds);
             let accuracy = table_accuracy(ExpectedBehavior::Wire, &table, None, &[]);
-            println!("PARITY {} {:.6}", std::path::Path::new(path).file_name().unwrap().to_string_lossy(), accuracy);
+            println!(
+                "PARITY {} {:.6}",
+                std::path::Path::new(path)
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy(),
+                accuracy
+            );
         }
     }
 
@@ -1815,13 +1904,21 @@ mod tests {
         };
         for (ix, x) in [60.0, 90.0].into_iter().enumerate() {
             for (iy, y) in [0.0, 8.0, 12.0, 16.0, 20.0, 30.0].into_iter().enumerate() {
-                let job = SweepJob { ix, iy, x, y: Some(y) };
+                let job = SweepJob {
+                    ix,
+                    iy,
+                    x,
+                    y: Some(y),
+                };
                 let point = run_job(&context, &job, &AtomicBool::new(false), |_| {}).unwrap();
                 assert!(point.error.is_none(), "{:?}", point.error);
                 let file = point.simulation_file.unwrap();
                 println!(
                     "PARITY {} {:.6}",
-                    std::path::Path::new(&file).file_name().unwrap().to_string_lossy(),
+                    std::path::Path::new(&file)
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy(),
                     point.accuracy.unwrap()
                 );
             }
@@ -1894,7 +1991,15 @@ mod tests {
         assert_eq!(incomplete.missing, 2);
 
         let (merged, report) = merge_runs("merged", parts).unwrap();
-        assert_eq!(report, MergeReport { runs: 3, points: 6, duplicates: 0, missing: 0 });
+        assert_eq!(
+            report,
+            MergeReport {
+                runs: 3,
+                points: 6,
+                duplicates: 0,
+                missing: 0
+            }
+        );
         assert_eq!(merged.slices.len(), 3);
         assert!(merged.config.as_ref().unwrap().slice.is_none());
         for (a, b) in full.points.iter().zip(&merged.points) {
@@ -1915,7 +2020,11 @@ mod tests {
         let mut kept = first.points[..1].to_vec();
         kept[0].duration_ms = 123_456;
         // A point outside the slice is ignored.
-        kept.push(SweepPoint { ix: 1, iy: 0, ..first.points[0].clone() });
+        kept.push(SweepPoint {
+            ix: 1,
+            iy: 0,
+            ..first.points[0].clone()
+        });
         let resumed = run_line(line_sweep_config(slice), kept);
         assert_eq!(resumed.points.len(), first.points.len());
         assert_eq!(resumed.points[0].duration_ms, 123_456);
