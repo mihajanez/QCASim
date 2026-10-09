@@ -14,8 +14,8 @@ pub struct SimulationModelSettings {
     pub clock_generator_settings: Value,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
 #[serde_inline_default]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SimulationSettings {
     #[serde_inline_default(None)]
     pub selected_simulation_model_id: Option<String>,
@@ -42,8 +42,8 @@ pub struct SimulationSettings {
     pub custom_input_sequence: Vec<Vec<usize>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
 #[serde_inline_default]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct QCADesign {
     #[serde_inline_default("unknown".to_string())]
     pub qca_core_version: String,
