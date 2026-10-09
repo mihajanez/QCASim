@@ -4,12 +4,19 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to (re)publish assets for, e.g. v1.0.0'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 env:
   CARGO_TERM_COLOR: always
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -25,6 +32,8 @@ jobs:
             platform: windows-x86_64
     steps:
     - uses: actions/checkout@v7
+      with:
+        ref: ${{ env.RELEASE_TAG }}
 
     - name: Build
       run: cargo build --release --locked --verbose
@@ -32,7 +41,7 @@ jobs:
     - name: Package Linux
       if: runner.os == 'Linux'
       run: |
-        name="qca-sim-${GITHUB_REF_NAME}-linux-x86_64"
+        name="qca-sim-${RELEASE_TAG}-linux-x86_64"
         mkdir "$name"
         cp target/release/qca-sim README.md LICENSE "$name"/
         cp -r examples "$name"/
@@ -43,7 +52,7 @@ jobs:
     - name: Package Windows
       if: runner.os == 'Windows'
       run: |
-        $name = "qca-sim-$env:GITHUB_REF_NAME-windows-x86_64"
+        $name = "qca-sim-$env:RELEASE_TAG-windows-x86_64"
         New-Item -ItemType Directory -Path $name | Out-Null
         Copy-Item target/release/qca-sim.exe, README.md, LICENSE -Destination $name
         Copy-Item examples -Destination $name -Recurse
@@ -57,7 +66,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: release-assets-${{ matrix.platform }}
-        path: qca-sim-${{ github.ref_name }}-${{ matrix.platform }}.*
+        path: qca-sim-${{ env.RELEASE_TAG }}-${{ matrix.platform }}.*
 
   release:
     runs-on: ubuntu-latest
@@ -74,6 +83,10 @@ jobs:
     - name: Publish GitHub Release
       env:
         GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
       run: |
-        gh release create "$GITHUB_REF_NAME" release-assets/* \
-          --title "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          gh release create "$RELEASE_TAG" \
+            --title "$RELEASE_TAG" --generate-notes --verify-tag
+        fi
+        gh release upload "$RELEASE_TAG" release-assets/* --clobber
