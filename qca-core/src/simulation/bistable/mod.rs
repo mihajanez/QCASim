@@ -336,6 +336,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: true,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -347,6 +348,7 @@ impl SimulationModelTrait for BistableModel {
                     max: Some(1.0),
                     unit: None,
                     whole_num: false,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -358,6 +360,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: Some("nm".into()),
                     whole_num: false,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -369,6 +372,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: false,
+                    choices: None,
                 },
             },
         ]
@@ -385,6 +389,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: true,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -396,6 +401,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: false,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -407,6 +413,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: false,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -418,6 +425,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: true,
+                    choices: None,
                 },
             },
             OptionsEntry::Input {
@@ -430,6 +438,7 @@ impl SimulationModelTrait for BistableModel {
                     max: None,
                     unit: None,
                     whole_num: true,
+                    choices: None,
                 },
             },
         ]
