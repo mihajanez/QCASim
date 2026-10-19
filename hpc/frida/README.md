@@ -115,7 +115,7 @@ inclusive `"start:stop:step"` range:
 
 | Field | Meaning |
 |---|---|
-| `x_axis`, `y_axis` (optional) | swept parameter and its values. Parameters: `geometry.cell_size`, `geometry.dot_radius`, `geometry.dot_diameter`, `geometry.layer_z:<layer>`, `geometry.cell_offset_x:<label>`, `geometry.cell_offset_y:<label>`, `model.<key>`, `clock.<key>` (e.g. `model.relative_permitivity`, `clock.amplitude_max`) |
+| `x_axis`, `y_axis` (optional) | swept parameter and its values. Parameters: `geometry.cell_size`, `geometry.dot_radius`, `geometry.dot_diameter`, `geometry.layer_z:<layer>`, `geometry.cell_offset_x:<label>`, `geometry.cell_offset_y:<label>`, `model.<key>`, `clock.<key>` (e.g. `model.relative_permitivity`, `clock.amplitude_max`, or `model.update_order`: 0 = sequential, 1 = reverse, 2 = random with `model.update_seed`, 3 = simultaneous) |
 | `expected_behavior` | `reference` (outputs must match the nominal design), `wire`, `inverter`, `majority`, `memory_cell`, `flipflop1`, `ternary_flipflop` |
 | `cell_clock_delays` | clock-cycle delay of output cells, by label, as `qca-sim truth -d` |
 | `thresholds` | truth-table thresholds (defaults of `qca-sim truth`) |

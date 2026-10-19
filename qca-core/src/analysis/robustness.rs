@@ -162,6 +162,20 @@ fn is_whole_number_option(model_id: &str, key: &str, clock: bool) -> bool {
     })
 }
 
+/// Default value of a numeric model or clock-generator setting.
+fn model_default(model_id: &str, key: &str, clock: bool) -> Option<f64> {
+    let model = create_sim_model(model_id)?;
+    let json = if clock {
+        model.serialize_clock_generator_settings().ok()?
+    } else {
+        model.serialize_model_settings().ok()?
+    };
+    serde_json::from_str::<Value>(&json)
+        .ok()?
+        .get(key)?
+        .as_f64()
+}
+
 fn get_parameter(design: &QCADesign, target: &SweepTarget) -> Result<f64, String> {
     let first_architecture = || {
         design
@@ -201,6 +215,7 @@ fn get_parameter(design: &QCADesign, target: &SweepTarget) -> Result<f64, String
             values
                 .get(key)
                 .and_then(Value::as_f64)
+                .or_else(|| model_default(&model_id, key, matches!(target, SweepTarget::Clock(_))))
                 .ok_or_else(|| format!("Model has no numeric parameter '{}'", key))
         }
     }
@@ -270,7 +285,8 @@ fn set_parameter(design: &mut QCADesign, target: &SweepTarget, value: f64) -> Re
             let model_id = selected_model_id(design)?;
             let whole_num = is_whole_number_option(&model_id, key, clock);
             let settings = settings_object(design, clock)?;
-            if !settings.contains_key(key) {
+            // Settings saved before a parameter existed fall back to its default.
+            if !settings.contains_key(key) && model_default(&model_id, key, clock).is_none() {
                 return Err(format!("Model has no parameter '{}'", key));
             }
             let json_value = if whole_num {
@@ -2030,6 +2046,18 @@ mod tests {
         assert_eq!(resumed.points[0].duration_ms, 123_456);
         for (a, b) in first.points.iter().zip(&resumed.points) {
             assert_eq!(a.accuracy, b.accuracy);
+        }
+    }
+
+    #[test]
+    fn update_order_is_a_sweepable_model_parameter() {
+        // Older designs do not store the setting; its default (0) is used.
+        let design = load_example("line.qcd");
+        let target: SweepTarget = "model.update_order".parse().unwrap();
+        assert_eq!(get_parameter(&design, &target).unwrap(), 0.0);
+        for order in [0.0, 1.0, 2.0, 3.0] {
+            let accuracy = sweep_point_accuracy(&design, &[(&target, order)]);
+            assert_eq!(accuracy, 1.0, "update order {}", order);
         }
     }
 
