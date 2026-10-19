@@ -53,12 +53,15 @@ build)
     [[ -f $SRC/Cargo.toml ]] || { echo "--build needs a QCASim source tree around $HERE" >&2; exit 1; }
     arch=$(uname -m)
     echo "building qca-sim from $SRC on partition $PARTITION"
-    # Pyxis/Enroot: the official Rust image (Alpine, so the binary is static).
+    target=$arch-unknown-linux-gnu
+    # Pyxis/Enroot with the official Debian-based Rust image (Slurm's task
+    # prolog needs bash inside the container, so Alpine images do not work);
+    # crt-static links glibc statically, so the binary runs on every node.
     srun -p "$PARTITION" -c 8 --mem=16G -t 00:45:00 \
-        --container-image=rust:1-alpine \
+        --container-image=rust:1-bookworm \
         --container-mounts="$SRC:$SRC" --container-workdir="$SRC" \
-        sh -c 'apk add --no-cache musl-dev >/dev/null && CARGO_TARGET_DIR=target/frida cargo build --release --locked -p qca-sim'
-    install -m 755 "$SRC/target/frida/release/qca-sim" "$BIN_DIR/qca-sim-$arch"
+        bash -c "CARGO_TARGET_DIR=target/frida RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --locked -p qca-sim --target $target"
+    install -m 755 "$SRC/target/frida/$target/release/qca-sim" "$BIN_DIR/qca-sim-$arch"
     ;;
 image)
     TAG=${VERSION#v}

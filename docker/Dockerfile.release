@@ -1,6 +1,7 @@
 # Image assembled from the prebuilt static release binaries (see
-# .github/workflows/release.yml); one image per architecture.
-FROM alpine:3.22
+# .github/workflows/release.yml); one image per architecture. Debian, not
+# Alpine: Slurm's task prolog runs inside Pyxis containers and needs bash.
+FROM debian:bookworm-slim
 ARG TARGETARCH
 COPY dist/qca-sim-linux-${TARGETARCH} /usr/local/bin/qca-sim
 COPY hpc /opt/qcasim/hpc

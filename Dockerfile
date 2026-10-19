@@ -5,17 +5,20 @@
 #   docker run --rm -v "$PWD:/work" -w /work qcasim qca-sim robustness plan design.qcd sweep.json
 #
 # Release images are published as ghcr.io/mihajanez/qcasim:<version>.
-FROM rust:1-alpine AS build
-RUN apk add --no-cache musl-dev
+# Debian-based images: Slurm's task prolog runs inside Pyxis containers and
+# needs bash, which Alpine images lack.
+FROM rust:1-bookworm AS build
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY qca-core qca-core
 COPY qca-sim qca-sim
-RUN cargo build --release --locked -p qca-sim \
- && strip target/release/qca-sim
+RUN RUSTFLAGS="-C target-feature=+crt-static" cargo build --release --locked -p qca-sim \
+      --target "$(uname -m)-unknown-linux-gnu" \
+ && cp "target/$(uname -m)-unknown-linux-gnu/release/qca-sim" /qca-sim \
+ && strip /qca-sim
 
-FROM alpine:3.22
-COPY --from=build /src/target/release/qca-sim /usr/local/bin/qca-sim
+FROM debian:bookworm-slim
+COPY --from=build /qca-sim /usr/local/bin/qca-sim
 # Slurm helper scripts, so that the image alone is enough on a cluster.
 COPY hpc /opt/qcasim/hpc
 ENV QCASIM_HPC=/opt/qcasim/hpc
