@@ -146,19 +146,22 @@ COMMON=(--partition="$PARTITION" --chdir="$RUN")
 [[ -n $ACCOUNT ]] && COMMON+=(--account="$ACCOUNT")
 COMMON+=("${EXTRA[@]}")
 
+# submit <dependencies> <sbatch arguments...>
 submit() {
+    local deps=$1
+    shift
     if [[ $DRY_RUN == 1 ]]; then
-        echo "sbatch $*" >&2
+        echo "sbatch ${deps:+--dependency=afterany:$deps }$*" >&2
         echo "DRYRUN$RANDOM"
     else
-        sbatch --parsable "$@" | cut -d';' -f1
+        qcasim_sbatch_after "$deps" "$@"
     fi
 }
 
-DEPENDENCY=()
+SWEEP_JOB=""
 if [[ -n $ARRAY ]]; then
     [[ -n $THROTTLE ]] && ARRAY="$ARRAY%$THROTTLE"
-    SWEEP_JOB=$(submit "${COMMON[@]}" \
+    SWEEP_JOB=$(submit "" "${COMMON[@]}" \
         --job-name="qcasim-$NAME" \
         --array="$ARRAY" \
         --cpus-per-task="$CPUS" \
@@ -166,11 +169,10 @@ if [[ -n $ARRAY ]]; then
         --time="$TIME" \
         --output="$RUN/logs/sweep_%A_%a.out" \
         "$HERE/qcasim-sweep.sbatch" "$RUN")
-    DEPENDENCY=(--dependency="afterany:$SWEEP_JOB")
-    echo "sweep job array: $SWEEP_JOB"
+    echo "sweep job array: $SWEEP_JOB" >&2
     echo "$SWEEP_JOB" >> "$RUN/jobs.txt"
 fi
-MERGE_JOB=$(submit "${COMMON[@]}" "${DEPENDENCY[@]}" \
+MERGE_JOB=$(submit "$SWEEP_JOB" "${COMMON[@]}" \
     --job-name="qcasim-$NAME-merge" \
     --output="$RUN/logs/merge_%j.out" \
     "$HERE/qcasim-merge.sbatch" "$RUN")

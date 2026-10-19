@@ -101,10 +101,10 @@ done
 if [[ ${#DRY[@]} -gt 0 ]]; then
     echo "sbatch --dependency=afterany:$DEPS ... $CAMPAIGN_DIR/collect.sh"
 else
-    COLLECT=$(sbatch --parsable "${PARTITION_OPT[@]}" --dependency="afterany:$DEPS" \
+    COLLECT=$(qcasim_sbatch_after "$DEPS" "${PARTITION_OPT[@]}" \
         --job-name="qcasim-$NAME-collect" -c 1 --mem=2G -t 00:15:00 \
         --chdir="$CAMPAIGN_DIR" --output="$CAMPAIGN_DIR/logs/collect_%j.out" \
-        "$CAMPAIGN_DIR/collect.sh" | cut -d';' -f1)
+        "$CAMPAIGN_DIR/collect.sh")
     echo "collect job: $COLLECT"
 fi
 echo "campaign directory: $CAMPAIGN_DIR (jobs.tsv lists the run directories; summary.tsv appears when all sweeps are merged)"

@@ -55,3 +55,52 @@ qcasim_step() {
         srun --ntasks=1 --cpus-per-task="${SLURM_CPUS_PER_TASK:-1}" "$bin" "$@"
     fi
 }
+
+# Submits a batch job and prints only its job ID; sbatch's messages go to
+# stderr. Fails, with sbatch's output, if no job ID can be found in it.
+qcasim_sbatch() {
+    local out id
+    out=$(sbatch --parsable "$@") || return 1
+    # --parsable prints "<id>" or "<id>;<cluster>"; sites that wrap sbatch may
+    # print other lines too, or the classic "Submitted batch job <id>".
+    id=$(sed -n -e 's/^\([0-9][0-9]*\)\(;.*\)\{0,1\}$/\1/p' \
+        -e 's/^Submitted batch job \([0-9][0-9]*\).*/\1/p' <<<"$out" | tail -n 1)
+    if [[ -z $id ]]; then
+        echo "error: no job ID in the output of sbatch:" >&2
+        echo "$out" >&2
+        return 1
+    fi
+    echo "$id"
+}
+
+# Like qcasim_sbatch, but the job starts after the jobs in $1 (colon-separated
+# IDs) have ended. Slurm rejects a dependency on a job it no longer knows
+# ("Job dependency problem"), e.g. one that failed within seconds and has
+# already been purged; such jobs are dropped from the dependency.
+qcasim_sbatch_after() {
+    local deps=$1 id
+    shift
+    if [[ -z $deps ]]; then
+        qcasim_sbatch "$@"
+        return
+    fi
+    if id=$(qcasim_sbatch --dependency="afterany:$deps" "$@" 2>/dev/null); then
+        echo "$id"
+        return
+    fi
+    local known=() gone=() job
+    for job in ${deps//:/ }; do
+        if [[ -n $(squeue -h -j "$job" -o %i 2>/dev/null | head -n 1) ]]; then
+            known+=("$job")
+        else
+            gone+=("$job")
+        fi
+    done
+    if [[ ${#gone[@]} -eq 0 ]]; then
+        # Every job is still queued, so the problem is elsewhere: show it.
+        qcasim_sbatch --dependency="afterany:$deps" "$@"
+        return
+    fi
+    echo "warning: job(s) ${gone[*]} already ended (see sacct -j ${gone[0]} and the logs)" >&2
+    qcasim_sbatch_after "$(IFS=:; echo "${known[*]}")" "$@"
+}
