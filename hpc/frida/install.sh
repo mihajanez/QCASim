@@ -57,10 +57,13 @@ build)
     # Pyxis/Enroot with the official Debian-based Rust image (Slurm's task
     # prolog needs bash inside the container, so Alpine images do not work);
     # crt-static links glibc statically, so the binary runs on every node.
+    # Pyxis passes the login node's PATH into the container, which hides the
+    # image's /usr/local/cargo/bin, so the Rust environment is set explicitly;
+    # the crate cache goes into the (writable) source tree.
     srun -p "$PARTITION" -c 8 --mem=16G -t 00:45:00 \
         --container-image=rust:1-bookworm \
         --container-mounts="$SRC:$SRC" --container-workdir="$SRC" \
-        bash -c "CARGO_TARGET_DIR=target/frida RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --locked -p qca-sim --target $target"
+        bash -c "export PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin RUSTUP_HOME=/usr/local/rustup CARGO_HOME=$SRC/target/frida/cargo-home; CARGO_TARGET_DIR=target/frida RUSTFLAGS='-C target-feature=+crt-static' cargo build --release --locked -p qca-sim --target $target"
     install -m 755 "$SRC/target/frida/$target/release/qca-sim" "$BIN_DIR/qca-sim-$arch"
     ;;
 image)
