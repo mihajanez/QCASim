@@ -2,18 +2,16 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Build and Test](https://github.com/mihajanez/QCASim/actions/workflows/build-test.yml/badge.svg)](https://github.com/mihajanez/QCASim/actions/workflows/build-test.yml)
 
-A Quantum Cellular Automata (QCA) simulation framework for academic research, providing tools to model and analyze quantum dot cellular automata circuits.
+QCASim is the simulation core and command-line tool of the QCAForge framework for binary and ternary quantum-dot cellular automata (QCA). It consists of the library **QCACore** (`qca-core`), which implements the data model, the open file formats, the simulation models and the robustness engine, and the command-line tool **QCASim** (`qca-sim`) for scripted, reproducible and large-scale simulation studies. The desktop application [QCAForge](https://github.com/mihajanez/QCAForge) uses the same library.
 
 ## Features
 
-- **Simulation engine**: Supports built-in bistable and ICHA model with option to use custom models as well.
-- **File Formats**: Defines and uses `.qcd` (QCA Design) and `.qcs` (QCA Simulation) file formats
-- **Truth Table Analysis**: Generate and analyze logic truth tables from simulation results
-- **CLI Interface**: Command-line tools for simulation and analysis
-- **Robustness sweeps**: the QCAForge robustness engine as a command (`qca-sim robustness`), splittable into slices for HPC job arrays
+- **Simulation models**: the bistable approximation (binary cells, with a heuristic extension for eight-dot cells) and the quantum-mechanical ICHA model (intercellular Hartree approximation) for cells with any number of dots and electrons; the ICHA cell update order is selectable (sequential, reverse, random or simultaneous). Further models are added through a common model interface.
+- **File formats**: `.qcd` (QCA design: layout, cell architectures and all simulation settings) and `.qcs` (self-contained simulation results with metadata)
+- **Truth tables**: logic states of the input and output cells per input combination, with clock, logical and value thresholds and per-cell clock delays
+- **Robustness sweeps**: `qca-sim robustness` sweeps one or two exported geometry, model or clock parameters, simulates all variants in parallel and scores them against the expected behaviour; sweeps can be split into slices for HPC job arrays, checkpointed and merged
 - **HPC workflow**: Slurm scripts and a guide for the FRIDA cluster (UL FRI) in [`hpc/frida`](hpc/frida/README.md)
-- **Example Designs**: Includes wire, inverter, majority gate, and memory cell designs
-- **Analysis**: Interactive analysis scripts for simulation data
+- **Python scripts**: generation of design variants, batch simulation and analysis of results in [`scripts/`](scripts/)
 
 ## Installation
 
@@ -23,9 +21,7 @@ cd QCASim
 cargo build --release
 ```
 
-Prebuilt binaries (statically linked for Linux x86_64/aarch64, Windows, macOS)
-are attached to the [releases](https://github.com/mihajanez/QCASim/releases);
-a container image is published as `ghcr.io/mihajanez/qcasim`.
+Every [release](https://github.com/mihajanez/QCASim/releases) provides packaged binaries for Linux x86_64 and Windows, statically linked Linux binaries for x86_64 and aarch64 (`qca-sim-linux-x86_64`, `qca-sim-linux-aarch64`), which run on any Linux system including HPC compute nodes, and the container image `ghcr.io/mihajanez/qcasim`.
 
 ## Usage
 
@@ -75,12 +71,8 @@ Use the Jupyter notebook `scripts/analysis.ipynb` for interactive analysis of si
 - `qca-core/`: Core simulation engine and data structures, truth tables and the robustness engine (`analysis::robustness`)
 - `qca-sim/`: CLI application for running and analyzing simulations
 - `hpc/`: Slurm workflow for HPC clusters (FRIDA)
-- `examples/`: Example QCA designs
+- `examples/`: example designs (wire with a simulation result, flip-flops); the elementary ternary structures are in the `examples/` folder of QCAForge
 - `scripts/`: Python analysis tools and batch processing utilities
-
-## Status
-
-This project is stable and under active development for academic research applications.
 
 ## License
 

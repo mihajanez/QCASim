@@ -1,2 +1,6 @@
 target/
 scripts/*/
+# Local-only files: IDE settings and the original example designs
+.idea/
+examples original/
+*.bundle
